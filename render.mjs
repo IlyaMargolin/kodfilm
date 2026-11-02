@@ -22,11 +22,24 @@ const server = http.createServer((req, res) => {
 const port = server.address().port;
 
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
-const page = await browser.newPage({ viewport: { width: W, height: H } });
-page.on('console', m => console.log('[page]', m.text()));
-page.on('pageerror', e => { console.error('[page error]', e); process.exit(1); });
-await page.goto(`http://localhost:${port}/engine/index.html?film=${film}&w=${W}&h=${H}`);
-await page.waitForFunction('window.__ready === true', null, { timeout: 120000 });
+// Страницу периодически пересоздаём: в 4K WebGL-контекст копит память и может упасть.
+// Рендер детерминированный, так что кадр после перезапуска такой же.
+let page;
+async function openPage() {
+  if (page) await page.close().catch(() => {});
+  page = await browser.newPage({ viewport: { width: W, height: H } });
+  page.on('console', m => console.log('[page]', m.text()));
+  page.on('pageerror', e => { console.error('[page error]', e); process.exit(1); });
+  await page.goto(`http://localhost:${port}/engine/index.html?film=${film}&w=${W}&h=${H}`);
+  await page.waitForFunction('window.__ready === true', null, { timeout: 120000 });
+}
+async function frame(i) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await page.evaluate(i => window.__frame(i), i); }
+    catch (e) { if (attempt >= 3) throw e; console.log(`  кадр ${i}: страница упала, перезапуск`); await openPage(); }
+  }
+}
+await openPage();
 const meta = await page.evaluate('window.__meta');
 let from = +arg('from', 0), to = +arg('to', meta.frames);
 if (arg('chunks')) { // --chunk K --chunks N: K-й кусок из N (для параллельного рендера)
@@ -38,7 +51,7 @@ console.log(`Рендер ${film}: кадры ${from}..${to - 1} из ${meta.fra
 const stills = arg('stills');
 if (stills) {
   for (const i of stills.split(',').map(Number)) {
-    const url = await page.evaluate(i => window.__frame(i), i);
+    const url = await frame(i);
     fs.writeFileSync(path.join(path.dirname(outFile), `still_${String(i).padStart(5, '0')}.png`), Buffer.from(url.split(',')[1], 'base64'));
   }
   await browser.close(); server.close(); console.log('Стоп-кадры готовы'); process.exit(0);
@@ -47,7 +60,8 @@ const ff = spawn('ffmpeg', ['-y', '-loglevel', 'error', '-f', 'image2pipe', '-fr
   '-c:v', 'libx264', '-preset', 'slow', '-crf', '17', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', outFile], { stdio: ['pipe', 'inherit', 'inherit'] });
 const t0 = Date.now();
 for (let i = from; i < to; i++) {
-  const url = await page.evaluate(i => window.__frame(i), i);
+  if (i > from && (i - from) % 150 === 0) await openPage();
+  const url = await frame(i);
   if (!ff.stdin.write(Buffer.from(url.split(',')[1], 'base64'))) await new Promise(r => ff.stdin.once('drain', r));
   if (i % 24 === 0) console.log(`  кадр ${i}  (${((Date.now() - t0) / 1000 / (i - from + 1)).toFixed(2)} c/кадр)`);
 }
