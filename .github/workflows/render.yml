@@ -1,0 +1,55 @@
+name: Render film
+on:
+  workflow_dispatch:
+    inputs:
+      film:   { description: 'Файл фильма', default: 'films/tochka.js' }
+      width:  { description: 'Ширина',  default: '3840' }
+      height: { description: 'Высота',  default: '2160' }
+      chunks: { description: 'На сколько параллельных кусков резать (1–16)', default: '12' }
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.m.outputs.matrix }}
+    steps:
+      - id: m
+        run: |
+          n=${{ github.event.inputs.chunks || '12' }}
+          echo "matrix=$(python3 -c "import json;print(json.dumps(list(range($n))))")" >> $GITHUB_OUTPUT
+
+  render:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        chunk: ${{ fromJson(needs.plan.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: npm ci || npm install
+      - run: npx playwright install --with-deps chromium
+      - name: Render chunk
+        run: |
+          FILM=${{ github.event.inputs.film || 'films/tochka.js' }}
+          W=${{ github.event.inputs.width || '3840' }}; H=${{ github.event.inputs.height || '2160' }}
+          N=${{ github.event.inputs.chunks || '12' }}; K=${{ matrix.chunk }}
+          node render.mjs --film $FILM --w $W --h $H --chunk $K --chunks $N --out out/parts/part_$(printf %03d $K).mp4
+      - uses: actions/upload-artifact@v4
+        with: { name: 'part-${{ matrix.chunk }}', path: out/parts/, retention-days: 3 }
+
+  assemble:
+    needs: render
+    runs-on: ubuntu-latest
+    steps:
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - uses: actions/download-artifact@v4
+        with: { path: parts, pattern: 'part-*', merge-multiple: true }
+      - run: |
+          ls parts/*.mp4 | sort | sed "s/^/file '/; s/$/'/" > list.txt
+          ffmpeg -y -f concat -safe 0 -i list.txt -c copy film.mp4
+      - uses: actions/upload-artifact@v4
+        with: { name: film, path: film.mp4, retention-days: 30 }

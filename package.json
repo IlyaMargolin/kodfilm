@@ -1,0 +1,13 @@
+{
+  "name": "kodfilm",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "render": "node render.mjs",
+    "preview": "node render.mjs --w 640 --h 360 --out out/preview.mp4"
+  },
+  "dependencies": {
+    "three": "0.170.0",
+    "playwright": "1.63.0"
+  }
+}
