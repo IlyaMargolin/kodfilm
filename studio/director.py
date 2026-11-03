@@ -16,8 +16,9 @@ TSTOP = {'ECU': 2.0, 'CU': 2.2, 'MCU': 2.8, 'MS': 3.5, 'FS': 4.0, 'WS': 5.6, 'EW
 POIS = {'sponza': {
     'lion_w':   ((-11.1, 0.25, 1.45), (-7.6, 0.25, 1.5), 'рельеф льва у входа'),
     'lion_e':   ((10.2, 0.25, 1.45), (6.6, 0.25, 1.5), 'лев в конце зала, куда он бежит'),
-    'arcade_n': ((0.0, 4.8, 6.5), (0.0, -1.2, 2.5), 'верхняя галерея: колонны и арки'),
+    'arcade_n': ((0.0, 4.8, 6.5), (0.0, -1.2, 2.5), 'верхняя галерея: колонны и арки', 40),
     'arches_s': ((-3.0, -4.5, 3.5), (0.5, 0.8, 1.6), 'резьба арки'),
+    'nave_up':  ((0.0, 0.3, 9.0), (-8.0, 0.3, 1.5), 'взгляд вверх вдоль нефа, к небу', 18),
 }}
 
 PROFILES = {
@@ -59,7 +60,7 @@ def candidates(beat, first, p, pois=None):
     side = 90
     pois = pois or {}
     if first:
-        ins = [('INS', k, 0, 'poi', 'push', 'архитектура: ' + v[2]) for k, v in pois.items() if k == 'arches_s']
+        ins = [('INS', k, 0, 'poi', 'push', 'архитектура: ' + v[2]) for k, v in pois.items() if k == 'nave_up']
         return ins + [('EWS', 15, 10, 'body', 'slow_push', 'устанавливающий: место и масштаб'), ('WS', 180, 4, 'body', 'follow', 'входим в сцену вместе с героем')]
     if A == 'walk':
         return [('FS', side, 2, 'body', 'track', 'боковой трэвеллинг'), ('MS', 25, -8 * low, 'chest', 'lead', 'камера отступает перед героем'),
@@ -116,7 +117,7 @@ def plan(scene, p_name, seed=7):
                       thirds=0.0 if p['sym'] > 0.7 else (0.18 if size in ('MS', 'MCU', 'CU', 'FS') else 0.0))
             sh.fstop = TSTOP[size] * p['fstop'] / 2.8
             sh.poi = pois[poi] if poi else None
-            if size == 'INS': sh.lens = p['lens']['close']
+            if size == 'INS': sh.lens = sh.poi[3] if len(sh.poi) > 3 else p['lens']['close']
             shots.append(sh); prev = sh
     return shots
 
