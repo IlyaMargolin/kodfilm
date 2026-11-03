@@ -7,3 +7,4 @@ assets/scans/
 __pycache__/
 *.deb
 assets/sso/
+assets/sfx/

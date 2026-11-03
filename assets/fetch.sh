@@ -15,4 +15,10 @@ S=https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/
 [ -f sets/sponza/Sponza.gltf ] || curl -sSfL -o sets/sponza/Sponza.gltf $S/Sponza.gltf
 python3 -c "import json;g=json.load(open('sets/sponza/Sponza.gltf'));print('\n'.join([b['uri'] for b in g['buffers']]+[i['uri'] for i in g['images']]))" | \
   while read u; do [ -f "sets/sponza/$u" ] || curl -sSfL -o "sets/sponza/$u" "$S/$u"; done
+# Фоли: шаги по камню и звуки брони — Kenney Impact Sounds, CC0 (общественное достояние)
+mkdir -p sfx
+if [ ! -f sfx/footstep_concrete_000.ogg ]; then
+  rm -rf /tmp/kis && git clone -q --depth 1 https://github.com/Boyquotes/kenney-impact-sounds-for-godot.git /tmp/kis
+  find /tmp/kis \( -name "footstep_concrete_*.ogg" -o -name "impact_metal_light_*.ogg" -o -name "impact_metal_medium_*.ogg" -o -name "impact_plate_light_*.ogg" -o -name "impact_soft_medium_*.ogg" \) -print0 | xargs -0 -I{} cp "{}" sfx/
+fi
 echo "ассеты на месте"
