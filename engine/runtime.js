@@ -27,19 +27,6 @@ const g2d = out.getContext('2d');
 
 await document.fonts.load("300 40px 'Inter Display Light'").catch(() => {});
 const film = (await import(params.get('film') || '/films/tochka.js')).default;
-const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(35, W / H, 0.05, 500);
-const ctx = { THREE, scene, camera, renderer, W, H, rand: mulberry32(film.seed ?? 1) };
-const shot = await film.build(ctx);
-
-const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), film.bloom?.strength ?? 1.1, film.bloom?.radius ?? 0.6, film.bloom?.threshold ?? 0.15);
-composer.addPass(bloom);
-composer.addPass(new OutputPass());
-const grade = new ShaderPass(FilmGrade);
-composer.addPass(grade);
-
 function drawTitles(t) {
   for (const tt of film.titles ?? []) {
     const a = envelope(t, tt.in, tt.out, tt.fade ?? 1.2);
@@ -59,6 +46,26 @@ function drawTitles(t) {
   }
 }
 
+if (film.kind === '2d') {
+  const draw = await film.build({ g: g2d, W, H });
+  window.__meta = { fps: film.fps, duration: film.duration, frames: Math.round(film.fps * film.duration), W, H };
+  window.__frame = (i) => { draw(i / film.fps, i); drawTitles(i / film.fps); return out.toDataURL('image/png'); };
+  window.__ready = true;
+}
+if (film.kind !== '2d') {
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(35, W / H, 0.05, 500);
+const ctx = { THREE, scene, camera, renderer, W, H, rand: mulberry32(film.seed ?? 1) };
+const shot = await film.build(ctx);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), film.bloom?.strength ?? 1.1, film.bloom?.radius ?? 0.6, film.bloom?.threshold ?? 0.15);
+composer.addPass(bloom);
+composer.addPass(new OutputPass());
+const grade = new ShaderPass(FilmGrade);
+composer.addPass(grade);
+
 window.__meta = { fps: film.fps, duration: film.duration, frames: Math.round(film.fps * film.duration), W, H };
 window.__frame = (i) => {
   const t = i / film.fps;
@@ -74,6 +81,7 @@ window.__frame = (i) => {
   return out.toDataURL('image/png');
 };
 window.__ready = true;
+}
 
 function envelope(t, a, b, f) {
   if (t < a || t > b) return 0;
