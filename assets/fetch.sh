@@ -21,4 +21,10 @@ if [ ! -f sfx/footstep_concrete_000.ogg ]; then
   rm -rf /tmp/kis && git clone -q --depth 1 https://github.com/Boyquotes/kenney-impact-sounds-for-godot.git /tmp/kis
   find /tmp/kis \( -name "footstep_concrete_*.ogg" -o -name "impact_metal_light_*.ogg" -o -name "impact_metal_medium_*.ogg" -o -name "impact_plate_light_*.ogg" -o -name "impact_soft_medium_*.ogg" \) -print0 | xargs -0 -I{} cp "{}" sfx/
 fi
+# Люди: открытые данные MakeHuman (MPFB2) — базовая сетка, морф-таргеты, риг Mixamo и веса кожи, лицензия CC0.
+# Код MPFB (GPL) не используем: только каталог data, читает его наш studio/human.py.
+if [ ! -f mh/3dobjs/base.obj ]; then
+  rm -rf /tmp/mpfb2 && git clone -q --depth 1 https://github.com/makehumancommunity/mpfb2.git /tmp/mpfb2
+  mkdir -p mh && cp -r /tmp/mpfb2/src/mpfb/data/3dobjs /tmp/mpfb2/src/mpfb/data/targets /tmp/mpfb2/src/mpfb/data/rigs mh/ && cp /tmp/mpfb2/LICENSE.ASSETS.md mh/
+fi
 echo "ассеты на месте"
