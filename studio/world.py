@@ -35,7 +35,9 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
                     gpus = [d for d in pr.devices if d.type == dev]
                     if gpus:
                         for d in pr.devices: d.use = d.type == dev
-                        cy.device = 'GPU'; cy.denoiser = 'OPTIX' if dev == 'OPTIX' else 'OPENIMAGEDENOISE'
+                        cy.device = 'GPU'; cy.denoiser = 'OPENIMAGEDENOISE'   # OptiX-денойзер на драйверах Kaggle не создаётся; OIDN 2 сам идёт на GPU
+                        try: cy.denoising_use_gpu = True
+                        except AttributeError: pass
                         print('Cycles GPU:', dev, [d.name for d in gpus], flush=True); break
                 except TypeError: pass
         except Exception as e: print('GPU не найден, Cycles на CPU:', e, flush=True)

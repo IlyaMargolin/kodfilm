@@ -4,7 +4,7 @@
 import os, sys, json, glob, subprocess, shutil, time
 J = (glob.glob('/kaggle/input/**/farm.json', recursive=True) or [None])[0]
 if not J: print('farm.json не найден'); sys.exit(1)
-SRC = os.path.dirname(J); job = json.load(open(J)); W = '/kaggle/working/kf'; OUT = '/kaggle/working/out'
+SRC = os.path.dirname(J); job = json.load(open(J)); W = '/tmp/kf'   # рабочая копия вне /kaggle/working, чтобы код и ассеты не попадали в выход; OUT = '/kaggle/working/out'
 shutil.copytree(SRC, W, dirs_exist_ok=True); os.makedirs(OUT, exist_ok=True)
 sh = lambda c: subprocess.run(c, shell=True, check=False)
 sh(f'{sys.executable} -m pip install -q bpy==5.2.3 soundfile')
