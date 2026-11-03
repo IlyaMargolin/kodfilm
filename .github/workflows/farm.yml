@@ -8,6 +8,9 @@ on:
       samples: { description: 'Сэмплов на пиксель (с денойзом хватает 64–128)', default: '96' }
       frames:  { description: 'Кадры: пусто = все, или 1-100', default: '' }
 
+permissions:
+  contents: write
+
 jobs:
   farm:
     runs-on: ubuntu-latest
@@ -47,6 +50,12 @@ jobs:
           done
           mkdir -p result && kaggle kernels output $U/kodfilm-farm-run -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
+      - name: Save result to branch
+        if: always()
+        run: |
+          cd result && rm -f *.log && git init -q && git checkout -q -b results-farm && git add -A && \
+          git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
+          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git results-farm:results-farm || echo "nothing to save"
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: farm-render, path: result/, retention-days: 14 }

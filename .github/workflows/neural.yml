@@ -6,6 +6,9 @@ on:
     inputs:
       job: { description: 'Папка задания в neural/jobs', default: 'hram_test' }
 
+permissions:
+  contents: write
+
 jobs:
   kaggle:
     runs-on: ubuntu-latest
@@ -47,6 +50,12 @@ jobs:
           mkdir -p result && kaggle kernels output $U/$SLUG-run -p result || true
           ls -la result result/out 2>/dev/null || true
           tail -50 result/*.log 2>/dev/null || true
+      - name: Save result to branch
+        if: always()
+        run: |
+          cd result && rm -f *.log && git init -q && git checkout -q -b results-neural && git add -A && \
+          git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
+          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git results-neural:results-neural || echo "nothing to save"
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: 'neural-${{ env.JOB }}', path: result/, retention-days: 14 }
