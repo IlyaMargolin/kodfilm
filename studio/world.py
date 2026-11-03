@@ -46,7 +46,11 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
 def hdri(name, strength=1.0, rot=0.0):
     w = bpy.data.worlds.new('world'); bpy.context.scene.world = w; w.use_nodes = True
     nt = w.node_tree; bg = nt.nodes['Background']
-    env = nt.nodes.new('ShaderNodeTexEnvironment'); env.image = bpy.data.images.load(A('hdri', name))
+    env = nt.nodes.new('ShaderNodeTexEnvironment')
+    for r in ('_4k', '_2k'):   # HQ-версия с Poly Haven (assets/fetch_hq.py), если скачана
+        hq = A('hdri', name.replace('_1k', r).replace('_2k', r))
+        if os.path.exists(hq): name = os.path.basename(hq); break
+    env.image = bpy.data.images.load(A('hdri', name))
     mp = nt.nodes.new('ShaderNodeMapping'); mp.inputs['Rotation'].default_value[2] = rot
     tc = nt.nodes.new('ShaderNodeTexCoord')
     nt.links.new(tc.outputs['Generated'], mp.inputs[0]); nt.links.new(mp.outputs[0], env.inputs[0])

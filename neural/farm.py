@@ -9,7 +9,7 @@ shutil.copytree(SRC, W, dirs_exist_ok=True); os.makedirs(OUT, exist_ok=True)
 sh = lambda c: subprocess.run(c, shell=True, check=False)
 sh(f'{sys.executable} -m pip install -q bpy==5.2.3 soundfile')
 sh('apt-get -qq install -y libxi6 libxxf86vm1 libxfixes3 libxrender1 libsm6 libgl1 libegl1 >/dev/null 2>&1 || true')
-sh(f'cd {W} && bash assets/fetch.sh')
+sh(f'cd {W} && bash assets/fetch.sh && {sys.executable} assets/fetch_hq.py 4k')
 n = int(subprocess.run('nvidia-smi -L | wc -l', shell=True, capture_output=True, text=True).stdout.strip() or 1)
 print('GPU:', subprocess.run('nvidia-smi -L', shell=True, capture_output=True, text=True).stdout, flush=True)
 t0 = time.time(); procs = []
