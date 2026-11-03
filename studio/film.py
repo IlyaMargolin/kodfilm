@@ -163,6 +163,18 @@ def path_ok(pos, P, clearance=0.5):
         if sc.ray_cast(dg, pos, v.normalized(), distance=L - 0.6)[0]: return False
     return True
 
+def frame_clear(pos, P, lens):
+    """Передний план не закрывает кадр: сетка 5×3 лучей по кадру, близкие препятствия (колонна в полкадра) — брак."""
+    global dg
+    dg = dg or bpy.context.evaluated_depsgraph_get()
+    fw = (P - pos).normalized(); rt = fw.cross(Vector((0, 0, 1))).normalized(); up = rt.cross(fw)
+    tw = SENSOR_W / 2 / lens; th = tw * a.h / a.w; near = 0; L = (P - pos).length
+    for i in (-0.9, -0.45, 0, 0.45, 0.9):
+        for j in (-0.8, 0, 0.8):
+            d = (fw + rt * (i * tw) + up * (j * th)).normalized()
+            if sc.ray_cast(dg, pos, d, distance=min(1.6, 0.35 * L))[0]: near += 1
+    return near <= 2
+
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
 def clamp(v):
     if not BOUNDS: return v
@@ -208,7 +220,7 @@ for si, sh in enumerate(shots):
         anchor = P if moving else subject(f0, sh.target)
         q = anchor + (dv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k * kd
         q.z = max(0.15, q.z)
-        return q, P
+        return clamp(ray_block(anchor, clamp(q))), P     # реальная точка: в стенах здания, перед препятствием
     # «оператор ищет точку»: проверяем ВЕСЬ путь камеры — не внутри стены/цепи/колонны и ничего не перекрывает героя
     plan_ok = None
     if not sh.pov and not sh.poi:
@@ -216,7 +228,7 @@ for si, sh in enumerate(shots):
         tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7) for de in (0, 8, -6) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
         for o, kd, de in tries:
             fs = list(range(f0, f1 + 1, 3)) + [f1]
-            ok = sum(1 for fm in fs if path_ok(*raw_pos(fm, o, kd, de)))
+            ok = sum(1 for fm in fs if path_ok(*raw_pos(fm, o, kd, de)) and frame_clear(*raw_pos(fm, o, kd, de), sh.lens))
             sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
             if sc_ > best[0]: best = (sc_, o, kd, de)
             if ok == len(fs): break
@@ -239,7 +251,6 @@ for si, sh in enumerate(shots):
             aimv = pos + (fwd * math.cos(math.radians(35 + 30 * u)) + Vector((0, 0, math.sin(math.radians(35 + 30 * u))))) * 10
         else:
             pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
-            pos = clamp(ray_block(P if moving else subject(f0, sh.target), clamp(pos)))
             aimv = P.copy()
         hh = Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует

@@ -22,7 +22,7 @@ RULES = {
                        desc='круговая: свет и виньетка собирают взгляд к фигуре в центре'),
     'triangular': dict(sx=0.07, sy=0.16, sizes=('MCU', 'CU', 'MS'), look_room=True, elev=-12,
                        desc='треугольник: плечи — основание, глаза — вершина; камера чуть снизу, сила и устойчивость'),
-    'scale':      dict(sx=0.0, sy=-0.30, sizes=('EWS', 'WS'), size='EWS', elev=8,
+    'scale':      dict(sx=0.0, sy=-0.30, sizes=('EWS', 'WS'), size='EWS', elev=8, snap_axis=True,
                        desc='масштаб: крошечная фигура внизу огромного пространства'),
     'negative':   dict(sx=0.34, sy=-0.08, sizes=('WS', 'FS', 'EWS'), look_room=False, away=True,
                        desc='негативное пространство: герой у края, пустота давит — одиночество, сомнение'),
