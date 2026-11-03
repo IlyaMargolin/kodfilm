@@ -14,7 +14,7 @@ ap.add_argument('--taa', type=int, default=10); ap.add_argument('--board', actio
 ap.add_argument('--director', default=None)
 ap.add_argument('--engine', default='eevee', choices=['eevee', 'cycles'], help='cycles — трассировка путей (для GPU-фермы на Kaggle)')
 ap.add_argument('--samples', type=int, default=96)
-ap.add_argument('--fogk', type=float, default=0.35, help='множитель плотности тумана в Cycles: настоящий объём гуще, чем в EEVEE')
+ap.add_argument('--fogk', type=float, default=0.5, help='множитель плотности тумана в Cycles: настоящий объём гуще, чем в EEVEE')
 ap.add_argument('--ev', type=float, default=None, help='экспозиция; в Cycles по умолчанию +0.9: нет фальшивого фонового света EEVEE, честный свет темнее')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
