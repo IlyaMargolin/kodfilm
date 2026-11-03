@@ -46,21 +46,31 @@ dt = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.fl
 vae = AutoencoderKLWan.from_pretrained(MID, subfolder='vae', torch_dtype=torch.float32)
 pipe = WanVACEPipeline.from_pretrained(MID, vae=vae, torch_dtype=dt)
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=3.0)
-pipe.enable_model_cpu_offload()
-pipe.vae.enable_tiling()   # VAE по тайлам: иначе 16 ГБ T4 не хватает
+# текстовый энкодер (umT5-XXL, ~11 ГБ) нужен только чтобы закодировать промпты: кодируем всё заранее и выгружаем его,
+# тогда трансформер 1.3B и VAE спокойно живут в 16 ГБ T4
 NEG = job.get('negative', 'cartoon, cgi, video game, plastic, low detail, blurry, deformed, extra limbs, text, watermark, overexposed, flicker')
+pipe.text_encoder.to('cuda'); EMB = {}
+with torch.no_grad():
+    for sh in job['shots']:
+        pe, ne = pipe.encode_prompt(prompt=job['style'] + ' ' + sh['prompt'], negative_prompt=NEG, do_classifier_free_guidance=True, device='cuda')
+        EMB[sh['file']] = (pe.to('cpu'), ne.to('cpu'))
+pipe.text_encoder = None; gc.collect(); torch.cuda.empty_cache()
+pipe.to('cuda')
+pipe.vae.enable_tiling()
+print('VRAM после загрузки:', round(torch.cuda.memory_allocated() / 2**30, 1), 'ГБ', flush=True)
 
 for sh in job['shots']:
     t0 = time.time()
     ctrl, n = PREP[sh['file']]; torch.cuda.empty_cache()
     mask = [Image.new('L', (W, H), 255)] * len(ctrl)
     def run(p):
-        return p(video=ctrl, mask=mask, prompt=job['style'] + ' ' + sh['prompt'], negative_prompt=NEG, height=H, width=W,
+        pe, ne = EMB[sh['file']]; pdt = next(p.transformer.parameters()).dtype
+        return p(video=ctrl, mask=mask, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt), height=H, width=W,
                  num_frames=len(ctrl), num_inference_steps=steps, guidance_scale=5.0, conditioning_scale=sh.get('strength', 1.0),
                  generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
     out = run(pipe)
     if not np.isfinite(out).all() or out.max() < 0.02:          # fp16 переполнился -> повтор в fp32
-        print('fp16 дал пустой кадр, повтор в fp32', flush=True); pipe.to(torch.float32); out = run(pipe)
+        print('fp16 дал пустой кадр, повтор в fp32', flush=True); pipe.transformer.to(torch.float32); out = run(pipe)
     out = (np.clip(out[:n], 0, 1) * 255).astype(np.uint8)
     iio.imwrite(os.path.join(OUT, sh['file']), out, fps=24, codec='libx264', quality=9)
     print('готово', sh['file'], len(out), 'кадров', round(time.time() - t0), 'с', flush=True)
