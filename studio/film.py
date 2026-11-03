@@ -182,17 +182,19 @@ def path_ok(pos, P, clearance=0.5):
         if sc.ray_cast(dg, pos, v.normalized(), distance=L - 0.6)[0]: return False
     return True
 
-def frame_clear(pos, P, lens):
-    """Передний план не закрывает кадр: сетка 5×3 лучей по кадру, близкие препятствия (колонна в полкадра) — брак."""
+def occlusion(pos, P, lens, scr=(0.0, 0.0)):
+    """Доля кадра, закрытая передним планом: сетка 7×5 лучей, попадание ближе 0.6 расстояния до героя."""
     global dg
     dg = dg or bpy.context.evaluated_depsgraph_get()
     fw = (P - pos).normalized(); rt = fw.cross(Vector((0, 0, 1))).normalized(); up = rt.cross(fw)
-    tw = SENSOR_W / 2 / lens; th = tw * a.h / a.w; near = 0; L = (P - pos).length
-    for i in (-0.9, -0.45, 0, 0.45, 0.9):
-        for j in (-0.8, 0, 0.8):
-            d = (fw + rt * (i * tw) + up * (j * th)).normalized()
-            if sc.ray_cast(dg, pos, d, distance=0.6 * L)[0]: near += 1   # всё, что сильно ближе героя, — передний план
-    return near <= 3
+    tw = SENSOR_W / 2 / lens; th = tw * a.h / a.w; L = (P - pos).length; near = 0; n = 0
+    for i in (-0.92, -0.6, -0.3, 0, 0.3, 0.6, 0.92):
+        for j in (-0.85, -0.42, 0, 0.42, 0.85):
+            d = (fw + rt * ((i - 2 * scr[0]) * tw) + up * ((j - 2 * scr[1]) * th)).normalized(); n += 1   # учёт композиции: герой не в центре
+            if sc.ray_cast(dg, pos, d, distance=0.6 * L)[0]: near += 1
+    return near / n
+
+ALLOW_OCC = {'EWS': 0.3, 'WS': 0.22, 'FS': 0.15}     # на общих арки по краям — рамка кадра; на крупных — брак
 
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
 def clamp(v):
@@ -226,6 +228,14 @@ for si, sh in enumerate(shots):
     RIM = 0 if (sh.poi or sh.pov or sh.size not in ('MS', 'MCU', 'CU', 'ECU')) else 90   # контровой только там, где его мотивирует солнце за героем и не видно пятна
     for ff, e in ((f0 - 1, 0), (f0, RIM), (f1, RIM), (f1 + 1, 0)):
         rd.energy = e; rd.keyframe_insert('energy', frame=max(1, ff))
+    # мягкий ключ-отражатель для портретов: как белый щит на площадке, отражённый свет с солнечной стороны.
+    # Лицо в тени капюшона/арки читается, но остаётся тёплым и мотивированным (не прожектор).
+    kd_ = bpy.data.lights.new(f'bounce{si:02d}', 'AREA'); kd_.size = 1.2; kd_.color = (1.0, 0.88, 0.74)
+    bounce = bpy.data.objects.new(f'bounce{si:02d}', kd_); sc.collection.objects.link(bounce)
+    bt_ = bounce.constraints.new('TRACK_TO'); bt_.target = foc; bt_.track_axis = 'TRACK_NEGATIVE_Z'; bt_.up_axis = 'UP_Y'
+    BOUNCE = 0 if (sh.poi or sh.pov or sh.size not in ('MS', 'MCU', 'CU', 'ECU')) else {'MS': 25, 'MCU': 14, 'CU': 10, 'ECU': 6}[sh.size]
+    for ff, e in ((f0 - 1, 0), (f0, BOUNCE), (f1, BOUNCE), (f1 + 1, 0)):
+        kd_.energy = e; kd_.keyframe_insert('energy', frame=max(1, ff))
     smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
     moving = sh.move in ('track', 'follow', 'lead')
     def raw_pos(f, off=0.0, kd=1.0, de=0.0):
@@ -244,13 +254,24 @@ for si, sh in enumerate(shots):
     plan_ok = None
     if not sh.pov and not sh.poi:
         best = (-1, 0, 1.0, 0.0)
-        tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7) for de in (0, 8, -6) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
+        tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7, 0.55) for de in (0, 8, -6, 18) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
         for o, kd, de in tries:
             fs = list(range(f0, f1 + 1, 3)) + [f1]
-            ok = sum(1 for fm in fs if path_ok(*raw_pos(fm, o, kd, de)) and frame_clear(*raw_pos(fm, o, kd, de), sh.lens))
+            allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0
+            for fm in fs:
+                q, Pq = raw_pos(fm, o, kd, de)
+                if not path_ok(q, Pq): continue
+                scr = (0.0, 0.0)
+                if sh.comp:      # куда композиция поставит героя из этой точки (как в покадровом цикле ниже)
+                    pp_ = track_pts[min(fm, TOTAL) - 1]; fw_ = Vector((math.cos(pp_['yaw'] + math.pi / 2), math.sin(pp_['yaw'] + math.pi / 2), 0))
+                    dv_ = Pq - q; yd = math.atan2(dv_.y, dv_.x); g_ = 1 if (fw_.x * math.sin(yd) - fw_.y * math.cos(yd)) >= -0.15 else -1
+                    sx_, sy_ = composition.screen_point(sh.comp, g_, a.w / a.h); scr = (sx_, sy_ / (composition.VISIBLE * a.w / a.h))
+                oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
+            ok = good - pen
             sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
+            if os.environ.get('CAMDBG') == str(si): print('try', o, kd, de, 'good', good, '/', len(fs), 'pen', round(pen, 2), 'score', round(sc_, 3))
             if sc_ > best[0]: best = (sc_, o, kd, de)
-            if ok == len(fs): break
+            if good == len(fs) and pen == 0: break
         _, az_fix, kd_fix, de_fix = best
     else:
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
@@ -309,6 +330,8 @@ for si, sh in enumerate(shots):
         if not sh.poi and not sh.pov:
             back = (subject(f, 'head') - cam.location); back.z = 0; back = back.normalized() if back.length > 0.01 else Vector((1, 0, 0))
             rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9)); rim.keyframe_insert('location', frame=f)
+            side = back.cross(Vector((0, 0, 1))).normalized() * (1 if (sun.matrix_world.to_quaternion() @ Vector((0, 0, 1))).dot(back.cross(Vector((0, 0, 1)))) > 0 else -1)
+            bounce.location = subject(f, 'head') - back * 1.3 + side * 0.9 + Vector((0, 0, 0.25)); bounce.keyframe_insert('location', frame=f)
     print('shot', si, sh.size, sh.comp, sh.screen, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))

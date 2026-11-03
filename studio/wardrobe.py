@@ -15,11 +15,11 @@ def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.9, sheen=0.12, scale=
     L.new(tc.outputs['Object'], wv.inputs['Vector']); L.new(tc.outputs['Object'], nz.inputs['Vector'])
     mx = N.new('ShaderNodeMath'); mx.operation = 'MULTIPLY_ADD'; mx.inputs[1].default_value = 0.3
     L.new(wv.outputs['Fac'], mx.inputs[0]); L.new(nz.outputs['Fac'], mx.inputs[2])
-    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.35; bp.inputs['Distance'].default_value = 0.002
+    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.6; bp.inputs['Distance'].default_value = 0.003
     L.new(mx.outputs[0], bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
     # потёртость: светлее на выступах
-    cr = N.new('ShaderNodeValToRGB'); cr.color_ramp.elements[0].color = (color[0] * 0.7, color[1] * 0.7, color[2] * 0.7, 1)
-    cr.color_ramp.elements[1].color = (color[0] * 1.5, color[1] * 1.45, color[2] * 1.35, 1)
+    cr = N.new('ShaderNodeValToRGB'); cr.color_ramp.elements[0].color = (color[0] * 0.55, color[1] * 0.55, color[2] * 0.55, 1)
+    cr.color_ramp.elements[1].color = (color[0] * 1.8, color[1] * 1.6, color[2] * 1.4, 1)
     L.new(nz.outputs['Fac'], cr.inputs['Fac']); L.new(cr.outputs['Color'], b.inputs['Base Color'])
     return m
 
