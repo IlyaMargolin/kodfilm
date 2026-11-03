@@ -27,9 +27,11 @@ jobs:
           echo "user=$U" >> $GITHUB_OUTPUT
           mkdir -p ds/assets && cp -r studio films ds/ && cp assets/fetch.sh ds/assets/
           python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}'),open('ds/farm.json','w'))"
-          echo "{\"title\":\"kodfilm-farm\",\"id\":\"$U/kodfilm-farm\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
-          kaggle datasets create -p ds -r zip -q || kaggle datasets version -p ds -r zip -m "job" -q --delete-old-versions
-          for i in $(seq 1 30); do kaggle datasets status $U/kodfilm-farm | tee /tmp/st; grep -qi ready /tmp/st && break; sleep 10; done
+          D=kodfilm-farm-${{ github.run_number }}; echo "ds=$D" >> $GITHUB_OUTPUT
+          echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
+          # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром
+          kaggle datasets create -p ds -r zip -q
+          for i in $(seq 1 30); do kaggle datasets status $U/$D | tee /tmp/st; grep -qi ready /tmp/st && break; sleep 10; done
           sleep 20
       - name: Push GPU kernel
         run: |
@@ -37,7 +39,7 @@ jobs:
           mkdir -p kr && cp neural/farm.py kr/
           cat > kr/kernel-metadata.json <<META
           {"id":"$U/kodfilm-farm-run","title":"kodfilm-farm-run","code_file":"farm.py","language":"python","kernel_type":"script",
-           "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/kodfilm-farm"]}
+           "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/${{ steps.me.outputs.ds }}"]}
           META
           kaggle kernels push -p kr
       - name: Wait for render
