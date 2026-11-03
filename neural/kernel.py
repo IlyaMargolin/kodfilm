@@ -8,7 +8,8 @@ except OSError: NET = False
 print('интернет в ноутбуке:', NET, flush=True)
 if not NET: print('НЕТ ИНТЕРНЕТА: на Kaggle нужно подтвердить телефон (Settings → Phone verification)'); sys.exit(2)
 subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', '-U', 'diffusers>=0.34', 'transformers>=4.51', 'accelerate', 'ftfy', 'imageio[ffmpeg]', 'av', 'sentencepiece'], check=False)
-import torch, numpy as np, imageio.v3 as iio
+os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+import torch, numpy as np, imageio.v3 as iio, gc
 from PIL import Image
 
 IN = (glob.glob('/kaggle/input/**/job.json', recursive=True) or [None])[0]
@@ -32,6 +33,13 @@ def to_depth(frames):
     lo = min(d.min() for d in ds); hi = max(d.max() for d in ds)
     return [Image.fromarray(((d - lo) / (hi - lo + 1e-6) * 255).astype(np.uint8)).convert('RGB') for d in ds]
 
+# 1) глубина для всех планов, затем модель глубины выгружается из видеопамяти
+PREP = {}
+for sh in job['shots']:
+    frames, n = load_frames(os.path.join(D, 'shots', sh['file'])); ctrl = to_depth(frames); PREP[sh['file']] = (ctrl, n)
+    iio.imwrite(os.path.join(OUT, sh['file'].replace('.mp4', '_depth.mp4')), np.stack([np.array(c) for c in ctrl]), fps=24, codec='libx264')
+del depth; gc.collect(); torch.cuda.empty_cache()
+
 from diffusers import AutoencoderKLWan, WanVACEPipeline, UniPCMultistepScheduler
 MID = 'Wan-AI/Wan2.1-VACE-1.3B-diffusers'
 dt = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.float16   # T4: bf16 только эмуляция, fp16 быстрее
@@ -39,13 +47,12 @@ vae = AutoencoderKLWan.from_pretrained(MID, subfolder='vae', torch_dtype=torch.f
 pipe = WanVACEPipeline.from_pretrained(MID, vae=vae, torch_dtype=dt)
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=3.0)
 pipe.enable_model_cpu_offload()
+pipe.vae.enable_tiling()   # VAE по тайлам: иначе 16 ГБ T4 не хватает
 NEG = job.get('negative', 'cartoon, cgi, video game, plastic, low detail, blurry, deformed, extra limbs, text, watermark, overexposed, flicker')
 
 for sh in job['shots']:
     t0 = time.time()
-    frames, n = load_frames(os.path.join(D, 'shots', sh['file']))
-    ctrl = to_depth(frames)
-    iio.imwrite(os.path.join(OUT, sh['file'].replace('.mp4', '_depth.mp4')), np.stack([np.array(c) for c in ctrl]), fps=24, codec='libx264')
+    ctrl, n = PREP[sh['file']]; torch.cuda.empty_cache()
     mask = [Image.new('L', (W, H), 255)] * len(ctrl)
     def run(p):
         return p(video=ctrl, mask=mask, prompt=job['style'] + ' ' + sh['prompt'], negative_prompt=NEG, height=H, width=W,
