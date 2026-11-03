@@ -6,3 +6,4 @@ assets/sets/
 assets/scans/
 __pycache__/
 *.deb
+assets/sso/

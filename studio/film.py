@@ -122,7 +122,11 @@ for key in ('fl', 'fr'):
 steps.sort(key=lambda x: x['t'])
 
 # ---------- камеры ----------
-SENSOR_H = 36 * a.h / a.w
+SENSOR_W = 24.89                      # Super 35, как ARRI Alexa: глубина резкости «киношная», не фотографическая
+SENSOR_H = SENSOR_W * a.h / a.w
+# моушн-блюр: затвор 180° (выдержка 1/48 при 24 к/с) — стандарт кино
+sc.render.use_motion_blur = True; sc.render.motion_blur_shutter = 0.5
+if hasattr(sc.eevee, 'motion_blur_steps'): sc.eevee.motion_blur_steps = 1
 dg = None
 def ray_block(origin, target):
     global dg
@@ -150,15 +154,20 @@ def subject(f, target):
 if fogobj: fogobj.hide_viewport = True   # туман не должен мешать проверке «камера в стене»
 cams = []
 for si, sh in enumerate(shots):
-    cd = bpy.data.cameras.new(f'shot{si:02d}'); cd.lens = sh.lens; cd.sensor_width = 36; cd.sensor_fit = 'HORIZONTAL'
+    cd = bpy.data.cameras.new(f'shot{si:02d}'); cd.lens = sh.lens; cd.sensor_width = SENSOR_W; cd.sensor_fit = 'HORIZONTAL'
     cd.clip_start = 0.05; cd.clip_end = 400
-    cd.dof.use_dof = sh.size not in ('EWS',); cd.dof.aperture_fstop = sh.fstop; cd.dof.aperture_blades = 7
+    cd.dof.use_dof = True; cd.dof.aperture_fstop = sh.fstop; cd.dof.aperture_blades = 9; cd.dof.aperture_rotation = 0.3
     cam = bpy.data.objects.new(f'shot{si:02d}', cd); sc.collection.objects.link(cam)
     foc = bpy.data.objects.new(f'focus{si:02d}', None); sc.collection.objects.link(foc); cd.dof.focus_object = foc
     f0, f1 = int(sh.start * FPS) + 1, max(int(sh.start * FPS) + 2, int(sh.end * FPS) + 1)
     dist = director.FRAME_H[sh.size] * sh.lens / SENSOR_H
     p0 = track_pts[f0 - 1]; yaw0 = p0['yaw']
     fwd0 = Vector((math.cos(yaw0 + math.pi / 2), math.sin(yaw0 + math.pi / 2), 0))
+    rd = bpy.data.lights.new(f'rim{si:02d}', 'AREA'); rd.size = 1.4; rd.color = (1.0, 0.86, 0.7)
+    rim = bpy.data.objects.new(f'rim{si:02d}', rd); sc.collection.objects.link(rim)
+    rt = rim.constraints.new('TRACK_TO'); rt.target = foc; rt.track_axis = 'TRACK_NEGATIVE_Z'; rt.up_axis = 'UP_Y'
+    for ff, e in ((f0 - 1, 0), (f0, 0 if (sh.poi or sh.pov) else 160), (f1, 0 if (sh.poi or sh.pov) else 160), (f1 + 1, 0)):
+        rd.energy = e; rd.keyframe_insert('energy', frame=max(1, ff))
     smooth_pos = None; smooth_aim = None
     # «оператор ищет точку»: если линия до героя перекрыта (колонна, занавес), сдвигаем ракурс по кругу
     def clear_ratio(off):
@@ -171,7 +180,7 @@ for si, sh in enumerate(shots):
             got = clamp(ray_block(Pm, want)); tot += (got - Pm).length / max(0.01, dist)
         return tot / 3
     az_fix = 0
-    if not sh.pov:
+    if not sh.pov and not sh.poi:
         best = (clear_ratio(0), 0)
         if best[0] < 0.95:
             for off in (20, -20, 40, -40, 60, -60, 90, -90):
@@ -192,7 +201,11 @@ for si, sh in enumerate(shots):
         el = math.radians(sh.elev)
         k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u}.get(sh.move, 1.0)
         anchor = P if moving else subject(f0, sh.target)
-        if sh.pov:
+        if sh.poi:
+            T, Fm = Vector(sh.poi[0]), Vector(sh.poi[1])
+            pos = Fm + (Fm - T) * (0.12 - 0.27 * (u * u * (3 - 2 * u)))      # медленный наезд с мягким стартом и остановкой
+            aimv = T.copy(); P = T
+        elif sh.pov:
             pos = p['head'] + fwd * 0.15
             aimv = pos + (fwd * math.cos(math.radians(35 + 30 * u)) + Vector((0, 0, math.sin(math.radians(35 + 30 * u))))) * 10
         else:
@@ -211,7 +224,13 @@ for si, sh in enumerate(shots):
         q = (smooth_aim - cam.location).to_track_quat('-Z', 'Y')
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
         cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
-        foc.location = P if not sh.pov else aimv; foc.keyframe_insert('location', frame=f)
+        # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке
+        fpt = P if sh.poi else (subject(f, 'head') if sh.size in ('ECU', 'CU', 'MCU', 'MS') else subject(f, 'chest'))
+        foc.location = aimv if sh.pov else fpt; foc.keyframe_insert('location', frame=f)
+        # контровой свет плана: как у оператора на площадке, за героем напротив камеры — отделяет от фона
+        if not sh.poi and not sh.pov:
+            back = (subject(f, 'head') - cam.location); back.z = 0; back = back.normalized() if back.length > 0.01 else Vector((1, 0, 0))
+            rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9)); rim.keyframe_insert('location', frame=f)
     print('shot', si, sh.size, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))

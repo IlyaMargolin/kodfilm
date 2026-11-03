@@ -9,7 +9,7 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
     sc = bpy.context.scene
     sc.render.engine = engine; sc.render.fps = fps
     sc.render.resolution_x, sc.render.resolution_y = w, h
-    sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'; sc.view_settings.exposure = 0.6
+    sc.view_settings.view_transform = 'AgX'; sc.view_settings.look = 'AgX - Medium High Contrast'; sc.view_settings.exposure = 0.15
     sc.render.image_settings.file_format = 'PNG'
     if engine == 'BLENDER_EEVEE':
         e = sc.eevee

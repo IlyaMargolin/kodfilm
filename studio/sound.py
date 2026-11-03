@@ -93,7 +93,7 @@ NOTE = lambda n: 440 * 2 ** ((n - 69) / 12)   # MIDI -> Гц
 def build(meta):
     dur = meta['duration'] + 3.0; N = int(dur * SR)
     dry = np.zeros((N, 2)); music = np.zeros((N, 2)); amb = np.zeros((N, 2))
-    FRAME_H = {'EWS': 14.0, 'WS': 5.5, 'FS': 2.4, 'MS': 1.15, 'MCU': 0.7, 'CU': 0.42, 'ECU': 0.2}
+    FRAME_H = {'EWS': 14.0, 'WS': 5.5, 'FS': 2.4, 'MS': 1.15, 'MCU': 0.7, 'CU': 0.42, 'ECU': 0.2, 'INS': 6.0}
     def shot_at(t):
         return next((s for s in meta['shots'] if s['start'] <= t < s['end']), meta['shots'][-1])
     # --- шаги: громкость и «сухость» зависят от того, насколько близко камера
