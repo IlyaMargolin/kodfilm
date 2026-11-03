@@ -50,7 +50,13 @@ EMOTION_BIAS = {
 
 def choose(size, emotion, weights, rnd, prev=None, used=()):
     """Выбор композиции под крупность, эмоцию и вкус постановщиков. Соседние кадры не повторяют одну и ту же."""
-    bias = EMOTION_BIAS.get(emotion or '', {})
+    bias = dict(EMOTION_BIAS.get(emotion or '', {}))
+    try:
+        from crew import emotions as _em
+        e = _em.get(emotion)
+        if e:
+            for i, k in enumerate(e['comp']): bias[k] = max(bias.get(k, 1.0), 2.5 - 0.5 * i)
+    except ImportError: pass
     opts = []
     for k, r in RULES.items():
         if size not in r['sizes']: continue

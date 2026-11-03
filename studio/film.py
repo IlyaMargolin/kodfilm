@@ -8,12 +8,13 @@ import world, script, director, composition
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--script', required=True); ap.add_argument('--out', default='out/film')
-ap.add_argument('--w', type=int, default=1280); ap.add_argument('--h', type=int, default=720); ap.add_argument('--fps', type=int, default=24)
+ap.add_argument('--w', type=int, default=1280); ap.add_argument('--h', type=int, default=0); ap.add_argument('--fps', type=int, default=24)
 ap.add_argument('--frames', default='all'); ap.add_argument('--chunk', type=int, default=0); ap.add_argument('--chunks', type=int, default=1)
-ap.add_argument('--taa', type=int, default=6); ap.add_argument('--board', action='store_true', help='раскадровка: по кадру из середины каждого плана')
+ap.add_argument('--taa', type=int, default=10); ap.add_argument('--board', action='store_true', help='раскадровка: по кадру из середины каждого плана')
 ap.add_argument('--director', default=None)
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
+if not a.h: a.h = int(round(a.w / 2.39 / 2)) * 2   # кадр сразу 2.39:1 — никаких чёрных полос, плеер сам впишет
 scn = script.parse(open(a.script, encoding='utf-8').read())
 if a.director: scn.director = a.director
 
@@ -48,6 +49,16 @@ for f in range(1, TOTAL + 1):
     bt = next((b for b in scn.beats if b.start <= tt < b.start + b.dur), scn.beats[-1])
     if bt.a and bt.b:
         u = min(1, max(0, (tt - bt.start) / bt.dur))
+        bi_ = scn.beats.index(bt)
+        stop_after = bi_ + 1 < len(scn.beats) and not scn.beats[bi_ + 1].a
+        start_from = bi_ > 0 and not scn.beats[bi_ - 1].a
+        # тело не останавливается мгновенно: последние ~0.6 с замедление, первые ~0.4 с разгон
+        eo = min(0.6 / bt.dur, 0.3) if stop_after else 0; ei = min(0.4 / bt.dur, 0.25) if start_from else 0
+        def ease(x):
+            if ei and x < ei: return x * x / (2 * ei) / (1 - ei / 2 - eo / 2)
+            if eo and x > 1 - eo: y = 1 - x; return 1 - y * y / (2 * eo) / (1 - ei / 2 - eo / 2)
+            return (x - ei / 2) / (1 - ei / 2 - eo / 2)
+        u = min(1, max(0, ease(u)))
         A_, B_ = Vector((*bt.a, 0)), Vector((*bt.b, 0)); cur = A_.lerp(B_, u)
         dv = (B_ - A_).normalized(); target_yaw = math.atan2(dv.y, dv.x) - math.pi / 2
         yaw += (target_yaw - yaw) * 0.15
@@ -61,7 +72,7 @@ for fc in hero.root.animation_data.action.fcurves if hasattr(hero.root.animation
 # действия тела: клипы мокапа с плавными переходами (две дорожки NLA, верхняя «вплывает»)
 ad = hero.arm.animation_data
 tracks = [hero.track, ad.nla_tracks.new()]
-B = int(0.45 * FPS)
+B = int(0.8 * FPS)   # переход между клипами 0.8 с: поза не «ломается» резко
 for i, bt in enumerate(scn.beats):
     act = ACT[bt.action]; s = int(bt.start * FPS) + 1; e = int((bt.start + bt.dur) * FPS) + 1
     tr = tracks[i % 2]; ac = hero.actions[act]
@@ -138,6 +149,20 @@ def ray_block(origin, target):
     hit, loc, *_ = sc.ray_cast(dg, o2, d.normalized(), distance=L - 0.45)
     return loc - d.normalized() * 0.3 if hit else target
 
+_DIRS = [Vector(v).normalized() for v in ((1,0,0),(-1,0,0),(0,1,0),(0,-1,0),(0,0,1),(1,1,0),(1,-1,0),(-1,1,0),(-1,-1,0),(1,0,1),(-1,0,1),(0,1,1),(0,-1,1))]
+def path_ok(pos, P, clearance=0.5):
+    """Камера не внутри и не вплотную к геометрии (цепи, занавесы, колонны) и видит героя целиком."""
+    global dg
+    dg = dg or bpy.context.evaluated_depsgraph_get()
+    for d in _DIRS:
+        if sc.ray_cast(dg, pos, d, distance=clearance)[0]: return False
+    for dz, side in ((0.15, 0), (-0.35, 0), (-0.8, 0), (-0.2, 0.22), (-0.2, -0.22)):
+        tgt = P + Vector((0, 0, dz)); v = tgt - pos; L = v.length
+        if L < 0.9: continue
+        perp = Vector((-v.y, v.x, 0)).normalized() * side; tgt = tgt + perp; v = tgt - pos; L = v.length
+        if sc.ray_cast(dg, pos, v.normalized(), distance=L - 0.6)[0]: return False
+    return True
+
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
 def clamp(v):
     if not BOUNDS: return v
@@ -164,63 +189,67 @@ for si, sh in enumerate(shots):
     dist = director.FRAME_H[sh.size] * sh.lens / SENSOR_H
     p0 = track_pts[f0 - 1]; yaw0 = p0['yaw']
     fwd0 = Vector((math.cos(yaw0 + math.pi / 2), math.sin(yaw0 + math.pi / 2), 0))
-    rd = bpy.data.lights.new(f'rim{si:02d}', 'AREA'); rd.size = 1.4; rd.color = (1.0, 0.86, 0.7)
+    rd = bpy.data.lights.new(f'rim{si:02d}', 'SPOT'); rd.spot_size = math.radians(28); rd.spot_blend = 0.6; rd.shadow_soft_size = 0.4; rd.color = (1.0, 0.86, 0.7)
     rim = bpy.data.objects.new(f'rim{si:02d}', rd); sc.collection.objects.link(rim)
     rt = rim.constraints.new('TRACK_TO'); rt.target = foc; rt.track_axis = 'TRACK_NEGATIVE_Z'; rt.up_axis = 'UP_Y'
-    for ff, e in ((f0 - 1, 0), (f0, 0 if (sh.poi or sh.pov) else 160), (f1, 0 if (sh.poi or sh.pov) else 160), (f1 + 1, 0)):
+    RIM = 0 if (sh.poi or sh.pov or sh.size not in ('MS', 'MCU', 'CU', 'ECU')) else 90   # контровой только там, где его мотивирует солнце за героем и не видно пятна
+    for ff, e in ((f0 - 1, 0), (f0, RIM), (f1, RIM), (f1 + 1, 0)):
         rd.energy = e; rd.keyframe_insert('energy', frame=max(1, ff))
     smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
-    # «оператор ищет точку»: если линия до героя перекрыта (колонна, занавес), сдвигаем ракурс по кругу
-    def clear_ratio(off):
-        tot = 0
-        for fm in (f0, (f0 + f1) // 2, f1):
-            Pm = subject(fm, sh.target); pm = track_pts[min(fm, TOTAL) - 1]
-            fw = Vector((math.cos(pm['yaw'] + math.pi / 2), math.sin(pm['yaw'] + math.pi / 2), 0))
-            az_ = math.radians(sh.azim + off); dv = Vector((fw.x * math.cos(az_) - fw.y * math.sin(az_), fw.x * math.sin(az_) + fw.y * math.cos(az_), 0))
-            el_ = math.radians(sh.elev); want = clamp(Pm + (dv * math.cos(el_) + Vector((0, 0, math.sin(el_)))) * dist)
-            got = clamp(ray_block(Pm, want)); tot += (got - Pm).length / max(0.01, dist)
-        return tot / 3
-    az_fix = 0
+    moving = sh.move in ('track', 'follow', 'lead')
+    def raw_pos(f, off=0.0, kd=1.0, de=0.0):
+        """Где стоит камера в кадре f без сглаживания: азимут+off, дистанция×kd, высота+de."""
+        u = (f - f0) / max(1, f1 - f0); P = subject(f, sh.target); p = track_pts[min(f, TOTAL) - 1]
+        fw = Vector((math.cos(p['yaw'] + math.pi / 2), math.sin(p['yaw'] + math.pi / 2), 0))
+        ref = fw if moving else fwd0
+        az = math.radians(sh.azim + off); el = math.radians(sh.elev + de)
+        dv = Vector((ref.x * math.cos(az) - ref.y * math.sin(az), ref.x * math.sin(az) + ref.y * math.cos(az), 0))
+        k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u}.get(sh.move, 1.0)
+        anchor = P if moving else subject(f0, sh.target)
+        q = anchor + (dv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k * kd
+        q.z = max(0.15, q.z)
+        return q, P
+    # «оператор ищет точку»: проверяем ВЕСЬ путь камеры — не внутри стены/цепи/колонны и ничего не перекрывает героя
+    plan_ok = None
     if not sh.pov and not sh.poi:
-        best = (clear_ratio(0), 0)
-        if best[0] < 0.95:
-            for off in (20, -20, 40, -40, 60, -60, 90, -90):
-                if abs(((sh.azim + off) % 360) - 180) > 178 and sh.azim not in (160, 170, 175, 180, 200): pass
-                r = clear_ratio(off)
-                if r > best[0] + 0.05: best = (r, off)
-                if r > 0.95: break
-        az_fix = best[1]
+        best = (-1, 0, 1.0, 0.0)
+        tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7) for de in (0, 8, -6) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
+        for o, kd, de in tries:
+            fs = list(range(f0, f1 + 1, 3)) + [f1]
+            ok = sum(1 for fm in fs if path_ok(*raw_pos(fm, o, kd, de)))
+            sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
+            if sc_ > best[0]: best = (sc_, o, kd, de)
+            if ok == len(fs): break
+        _, az_fix, kd_fix, de_fix = best
+    else:
+        az_fix, kd_fix, de_fix = 0, 1.0, 0.0
     for f in range(f0, f1 + 1):
         u = (f - f0) / max(1, f1 - f0)
         P = subject(f, sh.target)
         p = track_pts[min(f, TOTAL) - 1]
         fwd = Vector((math.cos(p['yaw'] + math.pi / 2), math.sin(p['yaw'] + math.pi / 2), 0))
-        moving = sh.move in ('track', 'follow', 'lead')
-        ref = fwd if moving else fwd0
-        az = math.radians(sh.azim + az_fix)
-        dirv = Vector((ref.x * math.cos(az) - ref.y * math.sin(az), ref.x * math.sin(az) + ref.y * math.cos(az), 0))
-        el = math.radians(sh.elev)
-        k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u}.get(sh.move, 1.0)
-        anchor = P if moving else subject(f0, sh.target)
         if sh.poi:
             T, Fm = Vector(sh.poi[0]), Vector(sh.poi[1])
-            pos = Fm + (Fm - T) * (0.12 - 0.27 * (u * u * (3 - 2 * u)))      # медленный наезд с мягким стартом и остановкой
+            # пролёт не тормозит к концу: склейка приходится на движение, следующий план его подхватывает
+            sp = 0.5 * u + 0.5 * u * u
+            pos = Fm + (Fm - T) * (0.12 - 0.27 * sp)
             aimv = T.copy(); P = T
         elif sh.pov:
             pos = p['head'] + fwd * 0.15
             aimv = pos + (fwd * math.cos(math.radians(35 + 30 * u)) + Vector((0, 0, math.sin(math.radians(35 + 30 * u))))) * 10
         else:
-            pos = anchor + (dirv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k
-            pos.z = max(0.12, pos.z)
-            pos = clamp(ray_block(anchor, clamp(pos)))
+            pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
+            pos = clamp(ray_block(P if moving else subject(f0, sh.target), clamp(pos)))
             aimv = P.copy()
-        hh = Vector((math.sin(f * 0.37) + 0.5 * math.sin(f * 0.91 + 1), math.sin(f * 0.29 + 2) + 0.5 * math.sin(f * 0.83), math.sin(f * 0.33 + 4))) * 0.012 * sh.hand
+        hh = Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует
         off = pos - (P if moving else Vector((0, 0, 0)))
         smooth_pos = off if smooth_pos is None else smooth_pos.lerp(off, 0.12 if moving else 0.25)
         smooth_aim = aimv if smooth_aim is None else smooth_aim.lerp(aimv, 0.6 if moving else 0.35)
         pos_now = smooth_pos + (P if moving else Vector((0, 0, 0)))
         cam.location = pos_now + hh
+        if not sh.poi and not sh.pov and not path_ok(cam.location, P):
+            cam.location = clamp(ray_block(P, cam.location)); smooth_pos = cam.location - (P if moving else Vector((0, 0, 0)))
         dvec = smooth_aim - cam.location
         yaw_d = math.atan2(dvec.y, dvec.x); pit_d = math.atan2(dvec.z, math.hypot(dvec.x, dvec.y))
         if sh.comp and gaze is None:
@@ -232,6 +261,12 @@ for si, sh in enumerate(shots):
             sh.screen = (round(sx, 3), round(sy / (composition.VISIBLE * a.w / a.h), 3))
         if sh.comp:
             yaw_c, pit_c = yaw_d + ox, pit_d - oy
+            # запас над головой: макушка не выходит за верх кадра (ECU режет сознательно)
+            if sh.size in ('CU', 'MCU', 'MS', 'FS', 'WS'):
+                crown = subject(f, 'head') + Vector((0, 0, 0.24)); dc = crown - cam.location
+                ang = math.atan2(dc.z, math.hypot(dc.x, dc.y)) - pit_c
+                half_v = math.atan(SENSOR_H / 2 / sh.lens); lim = half_v * 0.86
+                if ang > lim: pit_c += ang - lim
             q = Vector((math.cos(pit_c) * math.cos(yaw_c), math.cos(pit_c) * math.sin(yaw_c), math.sin(pit_c))).to_track_quat('-Z', 'Y')
         else:
             q = dvec.to_track_quat('-Z', 'Y')

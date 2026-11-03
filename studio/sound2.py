@@ -16,6 +16,31 @@ def put(buf, x, t, gain=1.0, pan=0.0):
         l, r = math.cos((pan + 1) * math.pi / 4), math.sin((pan + 1) * math.pi / 4); x = np.stack([x * l, x * r], 1)
     x = x[:len(buf) - i]; buf[i:i + len(x)] += x * gain
 
+SFX = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'assets', 'sfx')
+_cache = {}
+def sample(name):
+    """Записанный звук из assets/sfx (Kenney, CC0), приведённый к SR, моно."""
+    if name not in _cache:
+        x, sr = sf.read(os.path.join(SFX, name + '.ogg'), dtype='float32')
+        if x.ndim > 1: x = x.mean(1)
+        if sr != SR: x = signal.resample_poly(x, SR, sr).astype(np.float32)
+        _cache[name] = x / (np.abs(x).max() + 1e-9)
+    return _cache[name]
+
+def step_sound(kind, size_h):
+    """Шаг в броне по камню: удар подошвы (запись) + лязг пластин брони, тише и глуше на общих планах.
+    Каждый шаг немного другой (вариант записи, высота ±1.5 полутона, громкость ±2 дБ) — как у фоли-артиста."""
+    st = sample(f'footstep_concrete_{rng.integers(0, 5):03d}')
+    semis = rng.uniform(-1.5, 1.5) - (2.0 if kind == 'run' else 3.0)          # тяжёлый человек — ниже
+    st = signal.resample(st, int(len(st) * 2 ** (-semis / 12))).astype(np.float32)
+    body = s1.lp(st, 2500) * 0.9 + s1.band(st, 80, 300) * 0.8                  # вес тела: низ
+    clank = sample(f'impact_metal_light_{rng.integers(0, 5):03d}')
+    clank = signal.resample(clank, int(len(clank) * 1.3)).astype(np.float32) * (0.22 if kind == 'walk' else 0.32)
+    n = max(len(body), len(clank) + 900); x = np.zeros(n, np.float32)
+    x[:len(body)] += body; x[900:900 + len(clank)] += clank                   # лязг чуть позже удара
+    if size_h > 2.0: x = s1.lp(x, 6000 / math.log2(size_h + 1)).astype(np.float32)   # издалека — без верхов
+    return x * 10 ** (rng.uniform(-2, 2) / 20)
+
 def score(meta, N, O):
     """Партитура ре минор, по битам сцены: тема пространства → свет (ре мажор, хор) → сомнение (соло виолончели) → решимость (остинато, валторны, литавры)."""
     mus = np.zeros((N, 2), np.float32)
@@ -92,13 +117,14 @@ def build(meta):
     O = orchestra()
 
 
-    FRAME_H = {'EWS': 14.0, 'WS': 5.5, 'FS': 2.4, 'MS': 1.15, 'MCU': 0.7, 'CU': 0.42, 'ECU': 0.2, 'INS': 6.0}
+    FRAME_H = {'EWS': 11.0, 'WS': 4.6, 'FS': 2.15, 'MS': 0.98, 'MCU': 0.66, 'CU': 0.46, 'ECU': 0.18, 'INS': 6.0}
     shot_at = lambda t: next((s for s in meta['shots'] if s['start'] <= t < s['end']), meta['shots'][-1])
     foley = np.zeros((N, 2), np.float32)
     for st in meta['steps']:
         s = shot_at(st['t']); h = FRAME_H[s['size']]
-        g = float(np.clip(1.3 - 0.33 * math.log2(h / 0.4), 0.2, 1.4))
-        put(foley, s1.footstep(st['kind'], g).astype(np.float32), st['t'], pan=(-0.12 if st['side'] == 'fl' else 0.12))
+        # громкость по расстоянию до микрофона (крупность плана ~ дистанция): −6 дБ на удвоение, как в жизни
+        g = float(np.clip(0.42 * (0.9 / h) ** 0.5, 0.05, 0.5)) * (1.25 if st['kind'] == 'run' else 1.0)
+        put(foley, step_sound(st['kind'], h), st['t'], g, pan=(-0.08 if st['side'] == 'fl' else 0.08))
     amb = np.zeros((N, 2), np.float32)
     wind = s1.hp(s1.lp(np.cumsum(rng.standard_normal(N)) * 0.02, 900), 120); wind /= np.abs(wind).max()
     tt = np.arange(N) / SR; lfo = 0.6 + 0.4 * np.sin(2 * np.pi * tt / 7.3) * np.sin(2 * np.pi * tt / 2.9 + 1)
@@ -117,7 +143,13 @@ def build(meta):
     wet_amt = np.convolve(wet_amt, np.ones(4800) / 4800, mode='same')[:, None]
     send = foley * wet_amt + amb * 0.5 + mus * 0.28 + efx * 0.2
     rev = np.stack([signal.fftconvolve(send[:, c], ir[:, c])[:N] for c in range(2)], 1).astype(np.float32) * 0.2
-    stems = dict(foley=foley * (1 - 0.5 * wet_amt), ambience=amb, fx=efx * 0.8, music=mus * 0.9, reverb=rev)
+    stems = dict(foley=foley * (1 - 0.45 * wet_amt), ambience=amb * 0.8, fx=efx * 0.55, music=mus * 0.7, reverb=rev)
+    # баланс стемов по громкости, как на перезаписи: музыка ведёт, шаги ясно слышны, реверб — «воздух», а не каша
+    TARGET = dict(music=-21.0, foley=-27.0, fx=-25.0, ambience=-33.0, reverb=-31.0)
+    meter0 = pyln.Meter(SR)
+    for k, tl in TARGET.items():
+        Lk = meter0.integrated_loudness(stems[k])
+        if np.isfinite(Lk): stems[k] = (stems[k] * 10 ** ((tl - Lk) / 20)).astype(np.float32)
     mix = sum(stems.values())
     mix = s1.hp(mix.T, 28).T.astype(np.float32)
     # громкость: −16 LUFS (стандарт для онлайна), мягкий лимитер, пик −1 dBTP

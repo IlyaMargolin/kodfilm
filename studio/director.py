@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 PACE = 0.6   # общий темп монтажа: <1 — чаще склейки, чем «классический» ASL режиссёра
 SIZES = ['EWS', 'WS', 'FS', 'MS', 'MCU', 'CU', 'ECU']   # от сверхобщего до деталь
-FRAME_H = {'EWS': 14.0, 'WS': 5.5, 'FS': 2.4, 'MS': 1.15, 'MCU': 0.7, 'CU': 0.42, 'ECU': 0.2, 'INS': 1.6}  # высота кадра, м
+FRAME_H = {'EWS': 11.0, 'WS': 4.6, 'FS': 2.15, 'MS': 0.98, 'MCU': 0.66, 'CU': 0.46, 'ECU': 0.18, 'INS': 1.6}  # видимая высота кадра 2.39:1, с запасом над головой  # высота кадра, м
 
 # Диафрагма по крупности (Super 35, как на площадке): крупные планы T2–2.8 — фон мягкий, но читается;
 # общие T5.6–8 — пространство резкое. Профиль режиссёра сдвигает таблицу (Финчер/Нолан мельче ГРИП, Кубрик/Андерсон глубже).
@@ -25,6 +25,7 @@ POIS = {'sponza': {
 # Профили собираются из съёмочной группы (studio/crew): режиссёр + его оператор по умолчанию.
 # В сценарии можно сменить оператора строкой «ОПЕРАТОР: deakins».
 from crew import DIRECTORS, profile
+from crew import emotions
 import composition
 PROFILES = {k: profile(k) for k in DIRECTORS}
 
@@ -73,7 +74,9 @@ def plan(scene, p_name, seed=7):
     for bi, bt in enumerate(scene.beats):
         base_c = candidates(bt, False, p, pois)
         # бит режется на кадры: длина ~ ASL, эмоциональные биты — чуть длиннее, напряжённые — короче
+        emo = emotions.get(bt.emotion)
         asl = p['asl'] * (0.75 if bt.tension else 1.15 if bt.epic and bt.action != 'run' else 0.85 if bt.action == 'run' else 1.0)
+        if emo: asl = p['asl'] * emo['asl']      # грамматика эмоции задаёт темп монтажа бита
         # смысловой минимум: эмоциональный бит снимается хотя бы 2 планами (лицо + то, что он видит / пространство)
         need = 3 if (bt.action == 'run' and bt.epic and bt.dur > 2.5) else 2 if (bt.emotion or bi == 0 or bt.action == 'stand') and bt.dur > 2.4 else 1
         n = max(need, math.ceil(bt.dur / (asl * PACE) - 0.25))
@@ -81,7 +84,8 @@ def plan(scene, p_name, seed=7):
         for k in range(n):
             # сначала то, что смысл бита ставит первым; дальше — с весами профиля, без повторов и прыжков
             cands = candidates(bt, True, p, pois) if (bi == 0 and k == 0) else base_c
-            order = cands if k == 0 else sorted(cands, key=lambda c: -p['prefer'].get('MS' if c[0] in ('POV', 'INS') else c[0], 1) * (0.5 + rnd.random()))
+            pw = lambda c: p['prefer'].get('MS' if c[0] in ('POV', 'INS') else c[0], 1) * ((emo['sizes'].get(c[0], 0.6)) if emo else 1)
+            order = cands if k == 0 else sorted(cands, key=lambda c: -pw(c) * (0.5 + rnd.random()))
             pick = None
             for c in order:
                 size = c[0]
@@ -99,6 +103,8 @@ def plan(scene, p_name, seed=7):
                   'hand': mv, 'track': mv, 'float': mv}[p['move']]
             if bt.epic and size in ('CU', 'MCU') and p['move'] in ('push', 'slow') and mv not in ('track', 'follow', 'lead'): mv = 'push'
             if p['move'] == 'push' and mv == 'push' and bt.action in ('walk', 'run') and size != 'INS': mv = 'lead'   # на движущегося героя «наезд» = ведём спереди
+            # движение через склейку: после движущейся камеры статичный план «подхватывает» движение медленным наездом
+            if prev and (prev.move in ('push', 'track', 'follow', 'lead') or prev.poi) and mv == 'static' and size != 'INS': mv = 'slow_push'
             sh = Shot(cuts[k], cuts[k + 1], size, az, el, lens_for(p, size), mv, tgt,
                       dutch=(p['dutch'] * (1 if (len(shots) % 2) else -1)) if bt.tension else 0.0,
                       hand=p['hand'] + (0.25 if bt.action == 'run' else 0), fstop=p['fstop'], note=note, pov=pov,
