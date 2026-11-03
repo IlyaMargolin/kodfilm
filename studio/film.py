@@ -14,6 +14,7 @@ ap.add_argument('--taa', type=int, default=10); ap.add_argument('--board', actio
 ap.add_argument('--director', default=None)
 ap.add_argument('--engine', default='eevee', choices=['eevee', 'cycles'], help='cycles — трассировка путей (для GPU-фермы на Kaggle)')
 ap.add_argument('--samples', type=int, default=96)
+ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
 if not a.h: a.h = int(round(a.w / 2.39 / 2)) * 2   # кадр сразу 2.39:1 — никаких чёрных полос, плеер сам впишет
@@ -22,6 +23,8 @@ if a.director: scn.director = a.director
 
 # ---------- мир ----------
 sc = world.new_scene(a.w, a.h, FPS, engine='CYCLES' if a.engine == 'cycles' else 'BLENDER_EEVEE', TAA=a.samples if a.engine == 'cycles' else a.taa)
+if a.lens != 'none':
+    import lens; lens.setup(sc, a.lens)
 if scn.world == 'sponza': world.set_sponza()
 world.hdri(scn.sky[0], scn.sky[1])
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
