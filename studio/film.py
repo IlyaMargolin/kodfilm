@@ -1,10 +1,10 @@
 # Съёмка: сценарий -> мир -> постановка героя -> раскадровка режиссёра -> камеры -> кадры.
-# python studio/film.py -- --script films/hram.txt --out out/hram --w 1280 --h 720 [--frames all|1-100|10,20] [--board]
+# python studio/film.py -- --script films/hram/script.txt --out out/hram --w 1280 --h 720 [--frames all|1-100|10,20] [--board]
 import sys, os, json, math, argparse
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy
 from mathutils import Vector, Euler, Quaternion
-import world, script, director
+import world, script, director, composition
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--script', required=True); ap.add_argument('--out', default='out/film')
@@ -25,7 +25,8 @@ sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
 fogobj = world.fog(scn.fog, size=(40, 24, 16)) if scn.fog > 0 else None
 
 # ---------- постановка героя ----------
-hero = world.Actor(scn.hero)
+import cast
+hero = world.Actor(cast.resolve(scn.hero, os.path.dirname(os.path.abspath(a.script))))
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
 speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 pos = Vector((0, 0, 0)); yaw = 0.0
@@ -168,7 +169,7 @@ for si, sh in enumerate(shots):
     rt = rim.constraints.new('TRACK_TO'); rt.target = foc; rt.track_axis = 'TRACK_NEGATIVE_Z'; rt.up_axis = 'UP_Y'
     for ff, e in ((f0 - 1, 0), (f0, 0 if (sh.poi or sh.pov) else 160), (f1, 0 if (sh.poi or sh.pov) else 160), (f1 + 1, 0)):
         rd.energy = e; rd.keyframe_insert('energy', frame=max(1, ff))
-    smooth_pos = None; smooth_aim = None
+    smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
     # «оператор ищет точку»: если линия до героя перекрыта (колонна, занавес), сдвигаем ракурс по кругу
     def clear_ratio(off):
         tot = 0
@@ -212,8 +213,7 @@ for si, sh in enumerate(shots):
             pos = anchor + (dirv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k
             pos.z = max(0.12, pos.z)
             pos = clamp(ray_block(anchor, clamp(pos)))
-            side = Vector((-dirv.y, dirv.x, 0))
-            aimv = P + side * sh.thirds * director.FRAME_H[sh.size] * a.w / a.h
+            aimv = P.copy()
         hh = Vector((math.sin(f * 0.37) + 0.5 * math.sin(f * 0.91 + 1), math.sin(f * 0.29 + 2) + 0.5 * math.sin(f * 0.83), math.sin(f * 0.33 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует
         off = pos - (P if moving else Vector((0, 0, 0)))
@@ -221,7 +221,20 @@ for si, sh in enumerate(shots):
         smooth_aim = aimv if smooth_aim is None else smooth_aim.lerp(aimv, 0.6 if moving else 0.35)
         pos_now = smooth_pos + (P if moving else Vector((0, 0, 0)))
         cam.location = pos_now + hh
-        q = (smooth_aim - cam.location).to_track_quat('-Z', 'Y')
+        dvec = smooth_aim - cam.location
+        yaw_d = math.atan2(dvec.y, dvec.x); pit_d = math.atan2(dvec.z, math.hypot(dvec.x, dvec.y))
+        if sh.comp and gaze is None:
+            # куда герой смотрит по экрану: проекция его «вперёд» на правую ось камеры (воздух оставляем перед взглядом)
+            dotr = fwd.x * math.sin(yaw_d) - fwd.y * math.cos(yaw_d)
+            gaze = 1 if dotr >= -0.15 else -1
+            sx, sy = composition.screen_point(sh.comp, gaze, a.w / a.h)
+            ox, oy = composition.aim_offsets(sx, sy, sh.lens, SENSOR_W, a.w / a.h)
+            sh.screen = (round(sx, 3), round(sy / (composition.VISIBLE * a.w / a.h), 3))
+        if sh.comp:
+            yaw_c, pit_c = yaw_d + ox, pit_d - oy
+            q = Vector((math.cos(pit_c) * math.cos(yaw_c), math.cos(pit_c) * math.sin(yaw_c), math.sin(pit_c))).to_track_quat('-Z', 'Y')
+        else:
+            q = dvec.to_track_quat('-Z', 'Y')
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
         cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
         # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке
@@ -231,7 +244,7 @@ for si, sh in enumerate(shots):
         if not sh.poi and not sh.pov:
             back = (subject(f, 'head') - cam.location); back.z = 0; back = back.normalized() if back.length > 0.01 else Vector((1, 0, 0))
             rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9)); rim.keyframe_insert('location', frame=f)
-    print('shot', si, sh.size, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
+    print('shot', si, sh.size, sh.comp, sh.screen, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))
 
@@ -240,7 +253,8 @@ if fogobj: fogobj.hide_viewport = False
 os.makedirs(a.out, exist_ok=True)
 json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL, duration=TOTAL / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1)) for s in shots],
+               dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
 # ---------- рендер ----------

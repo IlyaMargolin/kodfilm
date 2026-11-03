@@ -1,7 +1,8 @@
 # Режиссёр: превращает биты сценария в раскадровку (список кадров) по почерку конкретного режиссёра.
 # Правила, которые соблюдаются всегда: 180°-линия, нет «прыжков» (соседние кадры отличаются
 # крупностью или углом ≥30°), монтажная склейка по действию, первый кадр сцены — общий.
-import math, random
+import math, random, os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from dataclasses import dataclass
 
 PACE = 0.6   # общий темп монтажа: <1 — чаще склейки, чем «классический» ASL режиссёра
@@ -21,25 +22,11 @@ POIS = {'sponza': {
     'nave_up':  ((0.0, 0.3, 9.0), (-8.0, 0.3, 1.5), 'взгляд вверх вдоль нефа, к небу', 18),
 }}
 
-PROFILES = {
-    # asl — средняя длина кадра (с), lens — любимые объективы по крупности, prefer — веса крупностей,
-    # move — характер движения камеры, dutch — наклон горизонта при напряжении, sym — тяга к центральной симметрии,
-    # low — склонность к нижнему ракурсу, hand — «ручная камера», fstop — глубина резкости
-    'villeneuve': dict(asl=4.2, lens=dict(wide=24, mid=40, close=65), prefer=dict(EWS=3, WS=3, FS=2, MS=1.5, MCU=1, CU=1.5, ECU=0.5),
-                       move='slow', dutch=0, sym=0.6, low=0.4, hand=0.0, fstop=2.8, desc='масштаб, тишина, силуэты, медленные наезды'),
-    'kubrick':    dict(asl=5.0, lens=dict(wide=18, mid=28, close=50), prefer=dict(EWS=2, WS=3, FS=2, MS=1, MCU=0.7, CU=1, ECU=0.3),
-                       move='dolly', dutch=0, sym=1.0, low=0.6, hand=0.0, fstop=5.6, desc='одноточечная перспектива, симметрия, неумолимый трэвеллинг'),
-    'fincher':    dict(asl=3.0, lens=dict(wide=27, mid=40, close=65), prefer=dict(EWS=0.5, WS=1.5, FS=2, MS=3, MCU=2.5, CU=2, ECU=1),
-                       move='locked', dutch=0, sym=0.3, low=0.2, hand=0.0, fstop=2.0, desc='точная камера, повторяет движение героя, холодный контраст'),
-    'spielberg':  dict(asl=3.6, lens=dict(wide=21, mid=35, close=50), prefer=dict(EWS=1, WS=2, FS=2, MS=2, MCU=2, CU=2.5, ECU=1),
-                       move='push', dutch=0, sym=0.2, low=0.7, hand=0.1, fstop=2.8, desc='наезд на лицо в момент откровения, герой снизу'),
-    'nolan':      dict(asl=2.4, lens=dict(wide=28, mid=50, close=85), prefer=dict(EWS=1.5, WS=1.5, FS=1.5, MS=2, MCU=2.5, CU=3, ECU=1.5),
-                       move='hand', dutch=0, sym=0.1, low=0.4, hand=0.6, fstop=2.0, desc='ручная камера, крупные планы, быстрый монтаж'),
-    'anderson':   dict(asl=3.0, lens=dict(wide=27, mid=40, close=40), prefer=dict(EWS=1, WS=3, FS=3, MS=2, MCU=1, CU=1, ECU=0.5),
-                       move='track', dutch=0, sym=1.0, low=0.0, hand=0.0, fstop=8.0, desc='строгая симметрия, фронтальность, боковой трэвеллинг'),
-    'thriller':   dict(asl=2.2, lens=dict(wide=21, mid=35, close=85), prefer=dict(EWS=0.5, WS=1, FS=1.5, MS=2, MCU=2.5, CU=3, ECU=2),
-                       move='hand', dutch=14, sym=0.0, low=0.5, hand=0.8, fstop=1.8, desc='голландский угол, нервная камера, детали'),
-}
+# Профили собираются из съёмочной группы (studio/crew): режиссёр + его оператор по умолчанию.
+# В сценарии можно сменить оператора строкой «ОПЕРАТОР: deakins».
+from crew import DIRECTORS, profile
+import composition
+PROFILES = {k: profile(k) for k in DIRECTORS}
 
 @dataclass
 class Shot:
@@ -49,6 +36,7 @@ class Shot:
     dutch: float = 0.0; hand: float = 0.0; fstop: float = 2.8; thirds: float = 0.0; note: str = ''
     pov: bool = False
     poi: tuple = None
+    comp: str = ''
 
 def lens_for(p, size):
     return p['lens']['wide'] if size in ('EWS', 'WS') else p['lens']['mid'] if size in ('FS', 'MS') else p['lens']['close']
@@ -80,7 +68,7 @@ def candidates(beat, first, p, pois=None):
     return [('MS', 30, 0, 'chest', 'static', '')]
 
 def plan(scene, p_name, seed=7):
-    p = PROFILES[p_name]; rnd = random.Random(seed); pois = POIS.get(scene.world, {})
+    p = profile(p_name, getattr(scene, 'dp', None)); crnd = random.Random(seed + 1); rnd = random.Random(seed); pois = POIS.get(scene.world, {})
     shots = []; prev = None
     for bi, bt in enumerate(scene.beats):
         base_c = candidates(bt, False, p, pois)
@@ -108,9 +96,9 @@ def plan(scene, p_name, seed=7):
             if size == 'INS': poi = az; az = 0
             if p['sym'] > 0.7 and size in ('EWS', 'WS') and not pov: az = 180 if az > 90 else 0   # симметрия по оси
             mv = {'slow': mv, 'dolly': 'dolly' if mv in ('static', 'slow_push') else mv, 'locked': mv, 'push': 'push' if size in ('MCU', 'CU') and mv not in ('track', 'follow', 'lead') else mv,
-                  'hand': mv, 'track': mv}[p['move']]
+                  'hand': mv, 'track': mv, 'float': mv}[p['move']]
             if bt.epic and size in ('CU', 'MCU') and p['move'] in ('push', 'slow') and mv not in ('track', 'follow', 'lead'): mv = 'push'
-            if p['move'] == 'push' and mv == 'push' and bt.action in ('walk', 'run'): mv = 'lead'   # на движущегося героя «наезд» = ведём спереди
+            if p['move'] == 'push' and mv == 'push' and bt.action in ('walk', 'run') and size != 'INS': mv = 'lead'   # на движущегося героя «наезд» = ведём спереди
             sh = Shot(cuts[k], cuts[k + 1], size, az, el, lens_for(p, size), mv, tgt,
                       dutch=(p['dutch'] * (1 if (len(shots) % 2) else -1)) if bt.tension else 0.0,
                       hand=p['hand'] + (0.25 if bt.action == 'run' else 0), fstop=p['fstop'], note=note, pov=pov,
@@ -118,8 +106,15 @@ def plan(scene, p_name, seed=7):
             sh.fstop = TSTOP[size] * p['fstop'] / 2.8
             sh.poi = pois[poi] if poi else None
             if size == 'INS': sh.lens = sh.poi[3] if len(sh.poi) > 3 else p['lens']['close']
+            elif not pov:
+                # композиция кадра: вкус режиссёра и оператора × эмоция бита; соседние планы не повторяют одну схему
+                sh.comp = composition.choose(size, bt.emotion, p['comp'], crnd, prev.comp if prev else None, [x.comp for x in shots])
+                r = composition.RULES[sh.comp]
+                if r.get('snap_axis') and mv not in ('track',): sh.azim = 180 if 90 < (sh.azim % 360) < 270 else 0
+                if sh.comp == 'scale': sh.lens = min(sh.lens, round(p['lens']['wide'] * 0.75))   # шире, чтобы фигура стала крошечной
+                if 'elev' in r and size not in ('EWS',): sh.elev = r['elev'] if r['elev'] < 0 else max(sh.elev, r['elev'])
             shots.append(sh); prev = sh
     return shots
 
 def describe(shots):
-    return '\n'.join(f'{s.start:5.1f}–{s.end:5.1f}  {s.size:3s} {s.lens:>3.0f}мм  {s.move:10s} {s.note}' for s in shots)
+    return '\n'.join(f'{s.start:5.1f}–{s.end:5.1f}  {s.size:3s} {s.lens:>3.0f}мм  {s.move:10s} {s.comp:10s} {s.note}' for s in shots)

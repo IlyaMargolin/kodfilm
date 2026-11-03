@@ -7,6 +7,8 @@
 #   ТУМАН: 0.012
 #   ГЕРОЙ: Soldier
 #   РЕЖИССЁР: villeneuve
+#   ОПЕРАТОР: fraser          (необязательно: по умолчанию «свой» оператор режиссёра)
+#   КОМПОЗИТОР: zimmer        (необязательно)
 #   ---
 #   [идёт -12,0 -> 0,0] Он входит из тени и идёт по храму.
 #   [стоит 2.5] Останавливается.
@@ -46,6 +48,8 @@ class Scene:
     fog: float = 0.0
     hero: str = 'Soldier.glb'
     director: str = 'villeneuve'
+    dp: str = None
+    composer: str = None
     beats: list = field(default_factory=list)
 
 def _pt(s): x, y = s.split(','); return (float(x), float(y))
@@ -63,8 +67,10 @@ def parse(text):
             elif k == 'НЕБО': p = v.split(); sc.sky = (p[0] + ('' if p[0].endswith('.hdr') else '.hdr'), float(p[1]) if len(p) > 1 else 0.5)
             elif k == 'СОЛНЦЕ': sc.sun = tuple(float(x) for x in v.split())
             elif k == 'ТУМАН': sc.fog = float(v)
-            elif k == 'ГЕРОЙ': sc.hero = v + ('' if v.endswith('.glb') else '.glb')
+            elif k == 'ГЕРОЙ': sc.hero = v   # роль из cast.json фильма, id актёра или файл модели — разрешается в film.py
             elif k == 'РЕЖИССЁР' or k == 'РЕЖИССЕР': sc.director = v.lower()
+            elif k == 'ОПЕРАТОР': sc.dp = v.lower()
+            elif k == 'КОМПОЗИТОР': sc.composer = v.lower()
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)
         if not m: continue
