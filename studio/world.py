@@ -19,6 +19,26 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
         if hasattr(e, 'ray_tracing_options'):
             e.ray_tracing_options.resolution_scale = '2'
         if hasattr(e, 'fast_gi_method'): e.fast_gi_method = 'GLOBAL_ILLUMINATION'
+    if engine == 'CYCLES':
+        # Настоящая трассировка путей: физичные блики, отражения, каустика, объёмные лучи сквозь арки.
+        cy = sc.cycles
+        cy.samples = TAA; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.02
+        cy.use_denoising = True
+        cy.max_bounces = 8; cy.diffuse_bounces = 3; cy.glossy_bounces = 4; cy.transmission_bounces = 8; cy.volume_bounces = 1
+        cy.caustics_reflective = True; cy.caustics_refractive = True; cy.blur_glossy = 0.5
+        cy.volume_step_rate = 2.0; cy.volume_max_steps = 256
+        try:
+            pr = bpy.context.preferences.addons['cycles'].preferences
+            for dev in ('OPTIX', 'CUDA'):
+                try:
+                    pr.compute_device_type = dev; pr.get_devices()
+                    gpus = [d for d in pr.devices if d.type == dev]
+                    if gpus:
+                        for d in pr.devices: d.use = d.type == dev
+                        cy.device = 'GPU'; cy.denoiser = 'OPTIX' if dev == 'OPTIX' else 'OPENIMAGEDENOISE'
+                        print('Cycles GPU:', dev, [d.name for d in gpus], flush=True); break
+                except TypeError: pass
+        except Exception as e: print('GPU не найден, Cycles на CPU:', e, flush=True)
     return sc
 
 def hdri(name, strength=1.0, rot=0.0):
