@@ -29,7 +29,7 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
         cy.volume_step_rate = 2.0; cy.volume_max_steps = 256
         try:
             pr = bpy.context.preferences.addons['cycles'].preferences
-            for dev in ('OPTIX', 'CUDA'):
+            for dev in ('CUDA', 'OPTIX'):   # CUDA первым: OptiX на Kaggle падает без nvoptix.bin
                 try:
                     pr.compute_device_type = dev; pr.get_devices()
                     gpus = [d for d in pr.devices if d.type == dev]
