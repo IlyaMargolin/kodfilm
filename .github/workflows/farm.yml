@@ -30,7 +30,7 @@ jobs:
           D=kodfilm-farm-${{ github.run_number }}; echo "ds=$D" >> $GITHUB_OUTPUT
           echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
           # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром
-          kaggle datasets create -p ds -r zip -q
+          for t in 1 2 3 4; do kaggle datasets create -p ds -r zip -q && break; echo "retry $t"; sleep $((t*20)); done
           for i in $(seq 1 30); do kaggle datasets status $U/$D | tee /tmp/st; grep -qi ready /tmp/st && break; sleep 10; done
           sleep 20
       - name: Push GPU kernel
