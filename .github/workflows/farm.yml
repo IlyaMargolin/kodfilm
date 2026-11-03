@@ -7,6 +7,7 @@ on:
       width:   { description: 'Ширина кадра (высота = ширина / 2.39)', default: '1920' }
       samples: { description: 'Сэмплов на пиксель (с денойзом хватает 64–128)', default: '96' }
       frames:  { description: 'Кадры: пусто = все, или 1-100', default: '' }
+      hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
 
 permissions:
   contents: write
@@ -26,7 +27,7 @@ jobs:
           U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))")
           echo "user=$U" >> $GITHUB_OUTPUT
           mkdir -p ds/assets && cp -r studio films ds/ && cp assets/fetch.sh ds/assets/
-          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}'),open('ds/farm.json','w'))"
+          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}',hero='${{ github.event.inputs.hero }}'),open('ds/farm.json','w'))"
           D=kodfilm-farm-${{ github.run_number }}; echo "ds=$D" >> $GITHUB_OUTPUT
           echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
           # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром
@@ -38,7 +39,7 @@ jobs:
           U=${{ steps.me.outputs.user }}
           mkdir -p kr && cp neural/farm.py kr/
           cat > kr/kernel-metadata.json <<META
-          {"id":"$U/kodfilm-farm-run","title":"kodfilm-farm-run","code_file":"farm.py","language":"python","kernel_type":"script",
+          {"id":"$U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}","title":"kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}","code_file":"farm.py","language":"python","kernel_type":"script",
            "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/${{ steps.me.outputs.ds }}"]}
           META
           kaggle kernels push -p kr
@@ -47,17 +48,17 @@ jobs:
           U=${{ steps.me.outputs.user }}
           sleep 60
           for i in $(seq 1 330); do
-            S=$(kaggle kernels status $U/kodfilm-farm-run 2>&1); echo "$(date +%T) $S"
+            S=$(kaggle kernels status $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} 2>&1); echo "$(date +%T) $S"
             echo "$S" | grep -qiE 'complete|error|cancel' && break; sleep 60
           done
-          mkdir -p result && kaggle kernels output $U/kodfilm-farm-run -p result || true
+          mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
       - name: Save result to branch
         if: always()
         run: |
           cd result && rm -f *.log && git init -q && git checkout -q -b results-farm && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
-          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git results-farm:results-farm || echo "nothing to save"
+          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} || echo "nothing to save"
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: farm-render, path: result/, retention-days: 14 }
