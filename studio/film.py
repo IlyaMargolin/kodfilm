@@ -191,8 +191,8 @@ def frame_clear(pos, P, lens):
     for i in (-0.9, -0.45, 0, 0.45, 0.9):
         for j in (-0.8, 0, 0.8):
             d = (fw + rt * (i * tw) + up * (j * th)).normalized()
-            if sc.ray_cast(dg, pos, d, distance=min(1.6, 0.35 * L))[0]: near += 1
-    return near <= 2
+            if sc.ray_cast(dg, pos, d, distance=0.6 * L)[0]: near += 1   # всё, что сильно ближе героя, — передний план
+    return near <= 3
 
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
 def clamp(v):
