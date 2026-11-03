@@ -12,7 +12,8 @@ import torch, numpy as np, imageio.v3 as iio
 from PIL import Image
 
 IN = (glob.glob('/kaggle/input/**/job.json', recursive=True) or [None])[0]
-if not IN: print('job.json не найден', glob.glob('/kaggle/input/**', recursive=True)[:40]); sys.exit(1); D = os.path.dirname(IN)
+if not IN: print('job.json не найден', glob.glob('/kaggle/input/**', recursive=True)[:40]); sys.exit(1)
+D = os.path.dirname(IN)
 job = json.load(open(IN)); OUT = '/kaggle/working/out'; os.makedirs(OUT, exist_ok=True)
 W, H = job.get('w', 832), job.get('h', 480); steps = job.get('steps', 30)
 print('GPU:', torch.cuda.get_device_name(0), 'bf16:', torch.cuda.is_bf16_supported(), flush=True)
