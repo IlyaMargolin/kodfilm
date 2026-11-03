@@ -40,15 +40,19 @@ for sh in job['shots']:
     iio.imwrite(os.path.join(OUT, sh['file'].replace('.mp4', '_depth.mp4')), np.stack([np.array(c) for c in ctrl]), fps=24, codec='libx264')
 del depth; gc.collect(); torch.cuda.empty_cache()
 
-from diffusers import AutoencoderKLWan, WanVACEPipeline, UniPCMultistepScheduler
-MID = 'Wan-AI/Wan2.1-VACE-1.3B-diffusers'
+# режимы: 'vace' — перерисовка по глубине (максимум свободы, может менять героя);
+# 'v2v' — проявка самого рендера (Cycles) с силой strength 0.3–0.6: сохраняет героя, композицию и свет, добавляет фактуру и «плёнку»
+MODE = job.get('mode', 'vace')
+from diffusers import AutoencoderKLWan, WanVACEPipeline, WanVideoToVideoPipeline, UniPCMultistepScheduler
+MID = 'Wan-AI/Wan2.1-VACE-1.3B-diffusers' if MODE == 'vace' else 'Wan-AI/Wan2.1-T2V-1.3B-diffusers'
+SRC = {sh['file']: load_frames(os.path.join(D, 'shots', sh['file']))[0] for sh in job['shots']}
 dt = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.float16   # T4: bf16 только эмуляция, fp16 быстрее
 vae = AutoencoderKLWan.from_pretrained(MID, subfolder='vae', torch_dtype=torch.float32)
-pipe = WanVACEPipeline.from_pretrained(MID, vae=vae, torch_dtype=dt)
+pipe = (WanVACEPipeline if MODE == 'vace' else WanVideoToVideoPipeline).from_pretrained(MID, vae=vae, torch_dtype=dt)
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=3.0)
 # текстовый энкодер (umT5-XXL, ~11 ГБ) нужен только чтобы закодировать промпты: кодируем всё заранее и выгружаем его,
 # тогда трансформер 1.3B и VAE спокойно живут в 16 ГБ T4
-NEG = job.get('negative', 'cartoon, cgi, video game, plastic, low detail, blurry, deformed, extra limbs, text, watermark, overexposed, flicker')
+NEG = job.get('negative', 'cartoon, cgi, video game, plastic, low detail, blurry, deformed, extra limbs, extra people, crowd, changing costume, text, watermark, overexposed, flicker')
 pipe.text_encoder.to('cuda'); EMB = {}
 with torch.no_grad():
     for sh in job['shots']:
@@ -65,7 +69,11 @@ for sh in job['shots']:
     mask = [Image.new('L', (W, H), 255)] * len(ctrl)
     def run(p):
         pe, ne = EMB[sh['file']]; pdt = next(p.transformer.parameters()).dtype
-        return p(video=ctrl, mask=mask, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt), height=H, width=W,
+        if MODE == 'v2v':
+            return p(video=SRC[sh['file']], prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt), height=H, width=W,
+                     num_inference_steps=steps, guidance_scale=5.0, strength=sh.get('strength', 0.45),
+                     generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
+        return p(video=ctrl, mask=mask, reference_images=[SRC[sh['file']][0]] if sh.get('ref_first') else None, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt), height=H, width=W,
                  num_frames=len(ctrl), num_inference_steps=steps, guidance_scale=5.0, conditioning_scale=sh.get('strength', 1.0),
                  generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
     out = run(pipe)
