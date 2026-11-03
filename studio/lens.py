@@ -1,7 +1,7 @@
 """Линза в композиторе Blender (работает на HDR-данных рендера, до тонмаппинга кадра в файл):
 блум от ярких источников, анаморфные горизонтальные блики, призрачные отражения и хроматическая аберрация.
 Яркость порогов в линейных единицах сцены: срабатывает только на реальных засветах (солнце, лампы, металл)."""
-import bpy
+import bpy, os
 
 LOOKS = {
     # имя: (bloom_thr, bloom_str, streak_thr, streak_str, ghosts_str, dispersion)
@@ -42,3 +42,26 @@ def setup(scene, look='cinema'):
         L.new(cur, ld.inputs['Image']); cur = ld.outputs['Image']
     L.new(cur, out.inputs[0])
     return ng
+
+def passes(scene, outdir, mist_far=60.0):
+    """Рендер по слоям, как у студий (AOV): на каждый кадр multilayer EXR с точной глубиной, туманом-дистанцией и нормалями,
+    плюс 16-битный PNG дистанции — точная карта глубины для нейро-прохода и DOF/тумана на монтаже без перерендера.
+    Вызывать после setup(): подключается к уже собранному дереву композитора."""
+    vl = scene.view_layers[0]
+    vl.use_pass_z = True; vl.use_pass_mist = True; vl.use_pass_normal = True
+    try: vl.use_pass_cryptomatte_object = True
+    except AttributeError: pass
+    if scene.world:
+        scene.world.mist_settings.start = 0.5; scene.world.mist_settings.depth = mist_far; scene.world.mist_settings.falloff = 'LINEAR'
+    ng = scene.compositing_node_group or setup(scene, 'clean')
+    rl = next(n for n in ng.nodes if n.bl_idname == 'CompositorNodeRLayers')
+    exr = ng.nodes.new('CompositorNodeOutputFile'); exr.directory = os.path.join(os.path.abspath(outdir), 'passes'); exr.file_name = 'p_#####'
+    exr.format.media_type = 'MULTI_LAYER_IMAGE'; exr.format.file_format = 'OPEN_EXR_MULTILAYER'; exr.format.color_depth = '16'
+    for name, kind, src in (('depth', 'FLOAT', 'Depth'), ('mist', 'FLOAT', 'Mist'), ('normal', 'VECTOR', 'Normal'), ('beauty', 'RGBA', 'Image')):
+        exr.file_output_items.new(kind, name)
+        if src in rl.outputs: ng.links.new(rl.outputs[src], exr.inputs[name])
+    png = ng.nodes.new('CompositorNodeOutputFile'); png.directory = os.path.join(os.path.abspath(outdir), 'depth'); png.file_name = 'd_#####_'
+    png.format.media_type = 'IMAGE'; png.format.file_format = 'PNG'; png.format.color_mode = 'BW'; png.format.color_depth = '16'
+    png.file_output_items.new('FLOAT', 'near')
+    inv = ng.nodes.new('CompositorNodeInvert')   # ближе = светлее, как у Depth-Anything
+    ng.links.new(rl.outputs['Mist'], inv.inputs['Color']); ng.links.new(inv.outputs['Color'], png.inputs['near'])

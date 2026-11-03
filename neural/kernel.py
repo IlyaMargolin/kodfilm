@@ -36,7 +36,9 @@ def to_depth(frames):
 # 1) глубина для всех планов, затем модель глубины выгружается из видеопамяти
 PREP = {}
 for sh in job['shots']:
-    frames, n = load_frames(os.path.join(D, 'shots', sh['file'])); ctrl = to_depth(frames); PREP[sh['file']] = (ctrl, n)
+    frames, n = load_frames(os.path.join(D, 'shots', sh['file']))
+    exact = os.path.join(D, 'shots', sh['file'].replace('.mp4', '_depth.mp4'))   # точная глубина из рендера (--passes) вместо угаданной
+    ctrl = load_frames(exact)[0][:len(frames)] if os.path.exists(exact) else to_depth(frames); PREP[sh['file']] = (ctrl, n)
     iio.imwrite(os.path.join(OUT, sh['file'].replace('.mp4', '_depth.mp4')), np.stack([np.array(c) for c in ctrl]), fps=24, codec='libx264')
 del depth; gc.collect(); torch.cuda.empty_cache()
 
