@@ -192,4 +192,31 @@ def build(arm, name='human', skin=None, subdiv=1, **macro):
     am = ob.modifiers.new('body', 'ARMATURE'); am.object = arm
     if subdiv:
         s = ob.modifiers.new('sub', 'SUBSURF'); s.levels = 1; s.render_levels = subdiv
+    # глаза: склера + радужка, на месте маркеров суставов глаз (с учётом сдвига головы при Т-позе)
+    dh = Vector(newJ['mixamorig:Head']) - Vector(J['mixamorig:Head'][0])
+    eye_m = eye_material()
+    for side in ('l', 'r'):
+        g = JOINTS.get(f'joint-{side}-eye')
+        if not g: continue
+        c = Vector(B[sorted(g)].mean(0)) + dh
+        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.0118, location=c, segments=24, ring_count=16); e = bpy.context.object
+        e.name = f'eye_{side}'; e.data.materials.append(eye_m); bpy.ops.object.shade_smooth()
+        e.parent = arm; e.parent_type = 'BONE'; e.parent_bone = 'mixamorig:Head'
+        bpy.context.view_layer.update(); e.matrix_world = Matrix.Translation(c)
+    ob['joints'] = {k: list(v) for k, v in newJ.items()}
     return ob
+
+def eye_material(iris=(0.22, 0.14, 0.06)):
+    """Глаз смотрит вдоль +Y объекта: зрачок и радужка по косинусу от переднего полюса, мокрая роговица (coat)."""
+    m = bpy.data.materials.new('eye'); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
+    b = N['Principled BSDF']; b.inputs['Roughness'].default_value = 0.25; b.inputs['Coat Weight'].default_value = 1.0
+    b.inputs['Coat Roughness'].default_value = 0.0
+    tc = N.new('ShaderNodeTexCoord'); sep = N.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Object'], sep.inputs[0])
+    dv = N.new('ShaderNodeMath'); dv.operation = 'DIVIDE'; dv.inputs[1].default_value = 0.0118; L.new(sep.outputs['Y'], dv.inputs[0])
+    r = N.new('ShaderNodeValToRGB'); e = r.color_ramp.elements
+    e[0].position = 0.0; e[0].color = (0.8, 0.76, 0.72, 1); e[1].position = 0.83; e[1].color = (0.75, 0.7, 0.66, 1)
+    for pos, col in ((0.845, (iris[0] * 0.6, iris[1] * 0.6, iris[2] * 0.6, 1)), (0.9, (*iris, 1)), (0.955, (iris[0] * 1.4, iris[1] * 1.3, iris[2], 1)),
+                     (0.962, (0.004, 0.004, 0.004, 1)), (1.0, (0.004, 0.004, 0.004, 1))):
+        n = e.new(pos); n.color = col
+    L.new(dv.outputs[0], r.inputs['Fac']); L.new(r.outputs['Color'], b.inputs['Base Color'])
+    return m
