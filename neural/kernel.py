@@ -7,7 +7,7 @@ try: socket.create_connection(('pypi.org', 443), 5); NET = True
 except OSError: NET = False
 print('интернет в ноутбуке:', NET, flush=True)
 if not NET: print('НЕТ ИНТЕРНЕТА: на Kaggle нужно подтвердить телефон (Settings → Phone verification)'); sys.exit(2)
-subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', '-U', 'diffusers>=0.34', 'transformers>=4.51', 'accelerate', 'ftfy', 'imageio[ffmpeg]', 'sentencepiece'], check=False)
+subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', '-U', 'diffusers>=0.34', 'transformers>=4.51', 'accelerate', 'ftfy', 'imageio[ffmpeg]', 'av', 'sentencepiece'], check=False)
 import torch, numpy as np, imageio.v3 as iio
 from PIL import Image
 
@@ -34,7 +34,7 @@ def to_depth(frames):
 
 from diffusers import AutoencoderKLWan, WanVACEPipeline, UniPCMultistepScheduler
 MID = 'Wan-AI/Wan2.1-VACE-1.3B-diffusers'
-dt = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
+dt = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.float16   # T4: bf16 только эмуляция, fp16 быстрее
 vae = AutoencoderKLWan.from_pretrained(MID, subfolder='vae', torch_dtype=torch.float32)
 pipe = WanVACEPipeline.from_pretrained(MID, vae=vae, torch_dtype=dt)
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=3.0)
