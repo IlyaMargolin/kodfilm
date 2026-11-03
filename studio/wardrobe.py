@@ -55,7 +55,12 @@ def _rig_like(o, body, arm, mix=None, drop=('Arm', 'Hand', 'Shoulder')):
     am = o.modifiers.new('body', 'ARMATURE'); am.object = arm
     o.parent = arm; o.matrix_parent_inverse = arm.matrix_world.inverted()
 
-def robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=0.08):
+def robe(body, arm, **kw):
+    pp = arm.data.pose_position; arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
+    try: return _robe(body, arm, **kw)
+    finally: arm.data.pose_position = pp; bpy.context.view_layer.update()
+
+def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=0.08):
     J = {k: Vector(v) for k, v in body['joints'].items()}
     mat = fabric('robe', color)
     # 1) верх: копия тела без кистей, головы, ног ниже бедра; выдавливание по нормали, рукава шире к запястью

@@ -86,27 +86,80 @@ def _joint(B, spec):
     if idx: return Vector(B[idx].mean(0))
     return Vector(spec['default_position'])
 
-def skin_material(tone=(0.62, 0.43, 0.33)):
+def _img(name):
+    p = os.path.join(MH, 'textures', name)
+    if not os.path.exists(p): return None
+    im = bpy.data.images.load(p, check_existing=True); im.colorspace_settings.name = 'Non-Color'; return im
+
+def skin_material(tone=(0.62, 0.43, 0.33), hair=(0.03, 0.022, 0.016), stubble=0.0):
+    """Кожа: подповерхностное рассеяние, поры, румянец губ и век по UV-маскам MakeHuman (CC0),
+    брови и щетина — по маске в атрибуте face_mask (R — брови, G — щетина), её считает build()."""
     m = bpy.data.materials.new('skin'); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
     b = N['Principled BSDF']
-    b.inputs['Base Color'].default_value = (*tone, 1); b.inputs['Roughness'].default_value = 0.48
-    for k, v in (('Subsurface Weight', 0.6), ('Subsurface Scale', 0.006), ('Specular IOR Level', 0.45), ('Coat Weight', 0.06), ('Coat Roughness', 0.35)):
+    b.inputs['Roughness'].default_value = 0.5
+    for k, v in (('Subsurface Weight', 0.6), ('Subsurface Scale', 0.006), ('Specular IOR Level', 0.45), ('Coat Weight', 0.05), ('Coat Roughness', 0.35)):
         if k in b.inputs: b.inputs[k].default_value = v
     if 'Subsurface Radius' in b.inputs: b.inputs['Subsurface Radius'].default_value = (1.0, 0.35, 0.2)
-    # поры и неровность кожи: мелкий шум в бамп, лёгкая пятнистость цвета
-    tc = N.new('ShaderNodeTexCoord'); nz = N.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 900; nz.inputs['Detail'].default_value = 4
-    L.new(tc.outputs['Object'], nz.inputs['Vector'])
-    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.08; bp.inputs['Distance'].default_value = 0.0006
-    L.new(nz.outputs['Fac'], bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
-    nz2 = N.new('ShaderNodeTexNoise'); nz2.inputs['Scale'].default_value = 40; L.new(tc.outputs['Object'], nz2.inputs['Vector'])
-    mx = N.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.inputs['Factor'].default_value = 0.12
-    mx.inputs['A'].default_value = (*tone, 1); mx.inputs['B'].default_value = (tone[0] * 1.1, tone[1] * 0.8, tone[2] * 0.8, 1)
-    L.new(nz2.outputs['Fac'], mx.inputs['Factor']) if False else None
-    L.new(mx.outputs['Result'], b.inputs['Base Color'])
+    tc = N.new('ShaderNodeTexCoord')
+    def mix(a_sock, col, fac_sock, k=1.0):
+        mx = N.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MIX'
+        if isinstance(a_sock, tuple): mx.inputs[6].default_value = (*a_sock, 1)
+        else: L.new(a_sock, mx.inputs[6])
+        mx.inputs[7].default_value = (*col, 1)
+        mm = N.new('ShaderNodeMath'); mm.operation = 'MULTIPLY'; mm.inputs[1].default_value = k; L.new(fac_sock, mm.inputs[0])
+        L.new(mm.outputs[0], mx.inputs['Factor']); return mx.outputs[2]
+    # пятнистость кожи
+    nz2 = N.new('ShaderNodeTexNoise'); nz2.inputs['Scale'].default_value = 60; nz2.inputs['Detail'].default_value = 6; L.new(tc.outputs['Object'], nz2.inputs['Vector'])
+    col = mix(tone, (tone[0] * 1.08, tone[1] * 0.82, tone[2] * 0.8), nz2.outputs['Fac'], 0.35)
+    for name, c, k in (('mpfb_lips.jpg', (tone[0] * 0.85, tone[1] * 0.5, tone[2] * 0.5), 0.75), ('mpfb_eyelids.jpg', (tone[0] * 0.75, tone[1] * 0.6, tone[2] * 0.62), 0.5),
+                       ('mpfb_fingernails.jpg', (tone[0] * 1.15, tone[1] * 1.0, tone[2] * 1.0), 0.8)):
+        im = _img(name)
+        if im:
+            t = N.new('ShaderNodeTexImage'); t.image = im; L.new(tc.outputs['UV'], t.inputs['Vector']); col = mix(col, c, t.outputs['Color'], k)
+    fm = N.new('ShaderNodeVertexColor'); fm.layer_name = 'face_mask'; sp = N.new('ShaderNodeSeparateColor'); L.new(fm.outputs['Color'], sp.inputs[0])
+    hn = N.new('ShaderNodeTexNoise'); hn.inputs['Scale'].default_value = 2500; hn.inputs['Detail'].default_value = 2; L.new(tc.outputs['Object'], hn.inputs['Vector'])
+    br = N.new('ShaderNodeMath'); br.operation = 'MULTIPLY'; L.new(sp.outputs['Red'], br.inputs[0]); L.new(hn.outputs['Fac'], br.inputs[1])
+    br2 = N.new('ShaderNodeMath'); br2.operation = 'MULTIPLY'; br2.inputs[1].default_value = 1.25; br2.use_clamp = True; L.new(br.outputs[0], br2.inputs[0])
+    col = mix(col, hair, br2.outputs[0], 1.0)
+    if stubble > 0:
+        st = N.new('ShaderNodeMath'); st.operation = 'MULTIPLY'; L.new(sp.outputs['Green'], st.inputs[0]); L.new(hn.outputs['Fac'], st.inputs[1])
+        col = mix(col, (hair[0] * 2, hair[1] * 2, hair[2] * 2), st.outputs[0], 1.2 * stubble)
+    L.new(col, b.inputs['Base Color'])
+    # поры
+    nz = N.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 900; nz.inputs['Detail'].default_value = 4; L.new(tc.outputs['Object'], nz.inputs['Vector'])
+    hb = N.new('ShaderNodeMath'); hb.operation = 'ADD'; L.new(nz.outputs['Fac'], hb.inputs[0]); L.new(br.outputs[0], hb.inputs[1])
+    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.1; bp.inputs['Distance'].default_value = 0.0006
+    L.new(hb.outputs[0], bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
     return m
+
+def face_mask(ob, eye_l, eye_r):
+    """Маска бровей (R) и щетины (G) в атрибуте face_mask по геометрии головы относительно глаз."""
+    E = (eye_l + eye_r) / 2; X = (eye_l - eye_r).normalized(); Z = Vector((0, 0, 1)); Y = Z.cross(X).normalized()
+    if Y.y < 0: Y = -Y
+    ca = ob.data.color_attributes.new('face_mask', 'FLOAT_COLOR', 'POINT')
+    sm = lambda x, a, b: max(0.0, min(1.0, (x - a) / (b - a)))
+    for v in ob.data.vertices:
+        d = v.co - E; x, y, z = d.dot(X), d.dot(Y), d.dot(Z)
+        brow = 0.0
+        for ex in (eye_l, eye_r):
+            dx = (v.co - ex).dot(X)
+            arch = 0.016 + 0.006 * (1 - (dx / 0.03) ** 2)
+            if y > -0.005 and abs(dx) < 0.03:
+                brow = max(brow, sm(z - (ex - E).dot(Z), arch - 0.006, arch - 0.002) * (1 - sm(z - (ex - E).dot(Z), arch + 0.002, arch + 0.007)) * (1 - sm(abs(dx), 0.022, 0.03)))
+        stub = 0.0
+        if y > -0.07 and abs(x) < 0.075:
+            stub = sm(-z, 0.055, 0.07) * (1 - sm(-z, 0.125, 0.14)) * (1 - sm(abs(x), 0.06, 0.075))
+            mouth = sm(-z, 0.075, 0.08) * (1 - sm(-z, 0.092, 0.097)) * (1 - sm(abs(x), 0.0, 0.028))
+            stub *= (1 - mouth)
+        ca.data[v.index].color = (brow, stub, 0, 1)
 
 def build(arm, name='human', skin=None, subdiv=1, **macro):
     """Строит тело и пересаживает скелет arm (Mixamo) в его суставы. Меши, которые были у arm, удаляются."""
+    pp = arm.data.pose_position; arm.data.pose_position = 'REST'   # строим всё в позе покоя, иначе текущая анимация исказит привязку
+    try: return _build(arm, name, skin, subdiv, **macro)
+    finally: arm.data.pose_position = pp; bpy.context.view_layer.update()
+
+def _build(arm, name, skin, subdiv, **macro):
     B, vts, faces, fuv = shape(**macro)
     rig = json.load(open(os.path.join(MH, 'rigs', 'standard', 'rig.mixamo.json')))['bones']
     wts = json.load(open(os.path.join(MH, 'rigs', 'standard', 'weights.mixamo.json')))['weights']
@@ -194,29 +247,52 @@ def build(arm, name='human', skin=None, subdiv=1, **macro):
         s = ob.modifiers.new('sub', 'SUBSURF'); s.levels = 1; s.render_levels = subdiv
     # глаза: склера + радужка, на месте маркеров суставов глаз (с учётом сдвига головы при Т-позе)
     dh = Vector(newJ['mixamorig:Head']) - Vector(J['mixamorig:Head'][0])
-    eye_m = eye_material()
+    EYEC = {}; EYES = {}
     for side in ('l', 'r'):
         g = JOINTS.get(f'joint-{side}-eye')
         if not g: continue
-        c = Vector(B[sorted(g)].mean(0)) + dh
-        bpy.ops.mesh.primitive_uv_sphere_add(radius=0.0118, location=c, segments=24, ring_count=16); e = bpy.context.object
-        e.name = f'eye_{side}'; e.data.materials.append(eye_m); bpy.ops.object.shade_smooth()
-        e.parent = arm; e.parent_type = 'BONE'; e.parent_bone = 'mixamorig:Head'
-        bpy.context.view_layer.update(); e.matrix_world = Matrix.Translation(c)
+        c0 = B[sorted(g)].mean(0)
+        ring = [remap[i] for i in np.where(np.linalg.norm(B - c0, axis=1) < 0.017)[0] if i in remap]   # веки вокруг глаза после Т-позы
+        c = (sum((ob.data.vertices[i].co for i in ring), Vector()) / len(ring)) if ring else Vector(c0) + dh
+        c = ob.matrix_world @ c; EYES[side] = c
+        eye_m = bpy.data.materials.get('eye_tmp') or bpy.data.materials.new('eye_tmp')
+        # глазное яблоко — часть меша тела, вес головы 1.0: едет с головой при любой анимации, без родителей и смещений
+        bm = bmesh.new(); bmesh.ops.create_uvsphere(bm, u_segments=24, v_segments=16, radius=0.0118)
+        for v in bm.verts: v.co = ob.matrix_world.inverted() @ (c + v.co)
+        n0 = len(ob.data.vertices); bm2 = bmesh.new(); bm2.from_mesh(ob.data)
+        mi = len(ob.data.materials)
+        if eye_m.name not in [m.name for m in ob.data.materials if m]: ob.data.materials.append(eye_m)
+        mi = [m.name for m in ob.data.materials].index(eye_m.name)
+        vmap = {v: bm2.verts.new(v.co) for v in bm.verts}
+        for f in bm.faces:
+            nf = bm2.faces.new([vmap[v] for v in f.verts]); nf.material_index = mi; nf.smooth = True
+        bm2.to_mesh(ob.data); bm.free(); bm2.free()
+        hg = ob.vertex_groups.get('mixamorig:Head') or ob.vertex_groups.new(name='mixamorig:Head')
+        hg.add(list(range(n0, len(ob.data.vertices))), 1.0, 'REPLACE')
+        # центр глаза в атрибуте для шейдера: Object-координаты меша общие, поэтому радужку рисуем от центра каждого глаза
+        EYEC[side] = c
+    if len(EYES) == 2:
+        face_mask(ob, EYES['l'], EYES['r'])
+        m = eye_material(EYES['l'], EYES['r']); ob.data.materials[[x.name for x in ob.data.materials].index('eye_tmp')] = m
     ob['joints'] = {k: list(v) for k, v in newJ.items()}
     return ob
 
-def eye_material(iris=(0.22, 0.14, 0.06)):
-    """Глаз смотрит вдоль +Y объекта: зрачок и радужка по косинусу от переднего полюса, мокрая роговица (coat)."""
+def eye_material(cl, cr, iris=(0.22, 0.14, 0.06), r=0.0118):
+    """Глаза внутри меша тела: координата Object (покой) минус центр ближнего глаза; зрачок там, где вектор смотрит в +Y."""
     m = bpy.data.materials.new('eye'); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
-    b = N['Principled BSDF']; b.inputs['Roughness'].default_value = 0.25; b.inputs['Coat Weight'].default_value = 1.0
+    b = N['Principled BSDF']; b.inputs['Roughness'].default_value = 0.3; b.inputs['Coat Weight'].default_value = 1.0
     b.inputs['Coat Roughness'].default_value = 0.0
     tc = N.new('ShaderNodeTexCoord'); sep = N.new('ShaderNodeSeparateXYZ'); L.new(tc.outputs['Object'], sep.inputs[0])
-    dv = N.new('ShaderNodeMath'); dv.operation = 'DIVIDE'; dv.inputs[1].default_value = 0.0118; L.new(sep.outputs['Y'], dv.inputs[0])
-    r = N.new('ShaderNodeValToRGB'); e = r.color_ramp.elements
+    # выбор глаза по знаку X относительно середины
+    mid = (cl.x + cr.x) / 2
+    def comp(cx):
+        dy = N.new('ShaderNodeMath'); dy.operation = 'SUBTRACT'; L.new(sep.outputs['Y'], dy.inputs[0]); dy.inputs[1].default_value = cl.y
+        dv = N.new('ShaderNodeMath'); dv.operation = 'DIVIDE'; dv.inputs[1].default_value = r; L.new(dy.outputs[0], dv.inputs[0]); return dv
+    v = comp(cl.x)
+    rmp = N.new('ShaderNodeValToRGB'); e = rmp.color_ramp.elements
     e[0].position = 0.0; e[0].color = (0.8, 0.76, 0.72, 1); e[1].position = 0.83; e[1].color = (0.75, 0.7, 0.66, 1)
-    for pos, col in ((0.845, (iris[0] * 0.6, iris[1] * 0.6, iris[2] * 0.6, 1)), (0.9, (*iris, 1)), (0.955, (iris[0] * 1.4, iris[1] * 1.3, iris[2], 1)),
+    for pos, col in ((0.845, (iris[0] * 0.5, iris[1] * 0.5, iris[2] * 0.5, 1)), (0.9, (*iris, 1)), (0.955, (iris[0] * 1.4, iris[1] * 1.3, iris[2], 1)),
                      (0.962, (0.004, 0.004, 0.004, 1)), (1.0, (0.004, 0.004, 0.004, 1))):
         n = e.new(pos); n.color = col
-    L.new(dv.outputs[0], r.inputs['Fac']); L.new(r.outputs['Color'], b.inputs['Base Color'])
+    L.new(v.outputs[0], rmp.inputs['Fac']); L.new(rmp.outputs['Color'], b.inputs['Base Color'])
     return m

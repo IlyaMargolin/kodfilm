@@ -25,6 +25,6 @@ fi
 # Код MPFB (GPL) не используем: только каталог data, читает его наш studio/human.py.
 if [ ! -f mh/3dobjs/base.obj ]; then
   rm -rf /tmp/mpfb2 && git clone -q --depth 1 https://github.com/makehumancommunity/mpfb2.git /tmp/mpfb2
-  mkdir -p mh && cp -r /tmp/mpfb2/src/mpfb/data/3dobjs /tmp/mpfb2/src/mpfb/data/targets /tmp/mpfb2/src/mpfb/data/rigs mh/ && cp /tmp/mpfb2/LICENSE.ASSETS.md mh/
+  mkdir -p mh && cp -r /tmp/mpfb2/src/mpfb/data/3dobjs /tmp/mpfb2/src/mpfb/data/targets /tmp/mpfb2/src/mpfb/data/rigs /tmp/mpfb2/src/mpfb/data/textures mh/ && cp /tmp/mpfb2/LICENSE.ASSETS.md mh/
 fi
 echo "ассеты на месте"

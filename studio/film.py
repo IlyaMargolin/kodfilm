@@ -45,7 +45,7 @@ SPEC = cast.spec(HERO, FILM_DIR) or {}
 if SPEC.get('human'):        # живой человек: своё тело (MakeHuman CC0) на скелете мокапа + костюм
     import human, wardrobe
     hs = dict(SPEC['human']); macro = {k: hs[k] for k in ('gender', 'age', 'muscle', 'weight', 'height', 'proportions') if k in hs}
-    body = human.build(hero.arm, skin=human.skin_material(tuple(hs['skin'])) if hs.get('skin') else None, **macro)
+    body = human.build(hero.arm, skin=human.skin_material(tuple(hs.get('skin', (0.62, 0.43, 0.33))), tuple(hs.get('hair', (0.03, 0.022, 0.016))), hs.get('stubble', 0.6 if hs.get('gender', 1) > 0.5 else 0)), **macro)
     if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
 speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}

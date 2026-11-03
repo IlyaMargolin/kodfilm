@@ -20,8 +20,8 @@ def water_material(deep=(0.006, 0.012, 0.016), foam=True):
         r = N.new('ShaderNodeMapRange'); r.inputs['From Min'].default_value = 0.62; r.inputs['From Max'].default_value = 1.0
         L.new(a.outputs['Fac'], r.inputs['Value'])
         mix = N.new('ShaderNodeMix'); mix.data_type = 'RGBA'
-        mix.inputs['A'].default_value = (*deep, 1); mix.inputs['B'].default_value = (0.75, 0.78, 0.8, 1)
-        L.new(r.outputs['Result'], mix.inputs['Factor']); L.new(mix.outputs['Result'], b.inputs['Base Color'])
+        mix.inputs[6].default_value = (*deep, 1); mix.inputs[7].default_value = (0.75, 0.78, 0.8, 1)
+        L.new(r.outputs['Result'], mix.inputs['Factor']); L.new(mix.outputs[2], b.inputs['Base Color'])
         rr = N.new('ShaderNodeMapRange'); rr.inputs['To Min'].default_value = 0.035; rr.inputs['To Max'].default_value = 0.6
         L.new(r.outputs['Result'], rr.inputs['Value']); L.new(rr.outputs['Result'], b.inputs['Roughness'])
     return m
