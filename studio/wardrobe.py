@@ -30,12 +30,21 @@ def _w(body, v, names):
         if any(k in n for k in names): s += g.weight
     return s
 
-def _rig_like(o, body, arm, mix=None):
-    """веса с тела: Data Transfer -> применить; mix={'mixamorig:Hips': 0.5} подмешивает жёсткую кость."""
-    for g in body.vertex_groups: o.vertex_groups.new(name=g.name)
+def _rig_like(o, body, arm, mix=None, drop=('Arm', 'Hand', 'Shoulder')):
+    """веса с тела: Data Transfer -> применить; mix={'mixamorig:Hips': 0.5} подмешивает жёсткую кость.
+    drop: кости, которые не должны тянуть эту вещь (у юбки рядом висят кисти — их веса отбрасываем и нормируем)."""
+    for g in body.vertex_groups:
+        if g.name != 'covered': o.vertex_groups.new(name=g.name)
     dt = o.modifiers.new('wt', 'DATA_TRANSFER'); dt.object = body; dt.use_vert_data = True
     dt.data_types_verts = {'VGROUP_WEIGHTS'}; dt.vert_mapping = 'POLYINTERP_NEAREST'
     bpy.context.view_layer.objects.active = o; bpy.ops.object.modifier_apply(modifier='wt')
+    bad = {g.index for g in o.vertex_groups if any(k in g.name for k in drop)}
+    for v in o.data.vertices:
+        keep = [(g.group, g.weight) for g in v.groups if g.group not in bad]
+        tot = sum(w for _, w in keep)
+        for gi in bad: o.vertex_groups[gi].remove([v.index])
+        if tot > 1e-6:
+            for gi, w in keep: o.vertex_groups[gi].add([v.index], w / tot, 'REPLACE')
     if mix:
         for vg_name, k in mix.items():
             vg = o.vertex_groups.get(vg_name) or o.vertex_groups.new(name=vg_name)
@@ -101,7 +110,7 @@ def robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=0
     rope = bpy.data.materials.new('rope'); rope.use_nodes = True; rb = rope.node_tree.nodes['Principled BSDF']
     rb.inputs['Base Color'].default_value = (0.32, 0.25, 0.16, 1); rb.inputs['Roughness'].default_value = 0.9
     belt.data.materials.append(rope); bpy.ops.object.shade_smooth()
-    _rig_like(belt, body, arm, mix={'mixamorig:Hips': 0.85})
+    _rig_like(belt, body, arm, mix={'mixamorig:Hips': 1.0})
     out = [top, sk, belt]
     if hood: out.append(hood_obj(body, arm, mat, J))
     return out
@@ -123,7 +132,7 @@ def hood_obj(body, arm, mat, J=None):
     h.scale = (0.135, 0.15, 0.15); bpy.ops.object.transform_apply(scale=True, location=False)
     h.data.materials.append(mat); bpy.ops.object.shade_smooth()
     loc = h.location.copy(); bpy.ops.object.transform_apply(location=True)
-    _rig_like(h, body, arm, mix={'mixamorig:Head': lambda co: max(0.0, min(1.0, (co.z - neck.z + 0.05) / 0.15)) * 0.9})
+    _rig_like(h, body, arm, drop=('Hand', 'ForeArm'), mix={'mixamorig:Head': lambda co: max(0.0, min(1.0, (co.z - neck.z + 0.05) / 0.15)) * 0.9})
     s = h.modifiers.new('thick', 'SOLIDIFY'); s.thickness = 0.012; s.offset = 1
     h.modifiers.new('sub', 'SUBSURF').render_levels = 2
     return h
