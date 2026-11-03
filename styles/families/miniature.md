@@ -1,6 +1,6 @@
 # kodfilm-miniature: куклы, пластилин и макеты
 
-Репо: `kodfilm-miniature` (пока не создан). Ядро: `kodfilm` как `core/`. Рендер 3D, но со своей «кукольной» логикой.
+Репо: [`kodfilm-miniature`](https://github.com/IlyaMargolin/kodfilm-miniature). Ядро: `kodfilm` как `core/`. Рендер 3D, но со своей «кукольной» логикой.
 
 ## Эталоны из ЛСР
 All Through the House, Night of the Mini Dead, Can't Stop, Close Encounters of the Mini Kind. Подробно в [../ldr-catalog.md](../ldr-catalog.md).

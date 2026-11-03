@@ -9,9 +9,9 @@
 | Репо | Что внутри | Примеры из ЛСР | Статус |
 |---|---|---|---|
 | [`kodfilm`](https://github.com/IlyaMargolin/kodfilm) | 3D-фото и 3D-мульт: PBR, мокап, кино-свет, люди, одежда | Sonnie's Edge, Secret War, Jibaro (3D-часть), Three Robots | работаем |
-| `kodfilm-toon` | 3D-сцена, отрисованная как рисунок: cel-shading, контуры, живописные текстуры | Suits, The Very Pulse of the Machine, Blindspot, The Witness, Fish Night | [заготовка](families/toon.md) |
-| `kodfilm-2d` | чистое 2D: покадровый рисунок, вектор, мел, тушь, акварель | Zima Blue, Good Hunting, Kill Team Kill, 400 Boys | [заготовка](families/2d.md) |
-| `kodfilm-miniature` | стоп-моушен, пластилин, марионетки, тилт-шифт миниатюра | All Through the House, Night of the Mini Dead, Can't Stop | [заготовка](families/miniature.md) |
+| [`kodfilm-toon`](https://github.com/IlyaMargolin/kodfilm-toon) | 3D-сцена, отрисованная как рисунок: cel-shading, контуры, живописные текстуры | Suits, The Very Pulse of the Machine, Blindspot, The Witness, Fish Night | создан, первый тест работает |
+| [`kodfilm-2d`](https://github.com/IlyaMargolin/kodfilm-2d) | чистое 2D: покадровый рисунок, вектор, мел, тушь, акварель | Zima Blue, Good Hunting, Kill Team Kill, 400 Boys | создан, первый тест работает |
+| [`kodfilm-miniature`](https://github.com/IlyaMargolin/kodfilm-miniature) | стоп-моушен, пластилин, марионетки, тилт-шифт миниатюра | All Through the House, Night of the Mini Dead, Can't Stop | создан, первый тест работает |
 
 Live action (Ice Age, Golgotha) мы не делаем.
 
@@ -21,7 +21,7 @@ Live action (Ice Age, Golgotha) мы не делаем.
 2. Стиль, где есть 3D-сцена, но свет и линия нарисованы, идёт в `kodfilm-toon`.
 3. Стиль без 3D-сцены, где кадр рисуется на плоскости, идёт в `kodfilm-2d`.
 4. Стиль, который прикидывается физическими куклами или макетом, идёт в `kodfilm-miniature`.
-5. Пока нужного репо нет, код и заметки стиля лежат здесь, в `styles/families/` (заметка `<стиль>.md` и рядом папка `<стиль>/` для кода), и переезжают одним коммитом, когда репо появится. В корневой `engine/` новые не-3D стили не кладём.
+5. Пока нужного репо нет, код и заметки стиля лежат здесь, в `styles/families/` и переезжают одним коммитом, когда репо появится. В корневой `engine/` новые не-3D стили не кладём.
 
 ## Что переносится из движка (общее ядро)
 
@@ -35,15 +35,14 @@ Live action (Ice Age, Golgotha) мы не делаем.
 
 Своё у каждого стиля только **отрисовка кадра**: в `kodfilm` это Three.js и PBR (и Blender на ферме), в `kodfilm-toon` toon-шейдеры поверх тех же сцен, в `kodfilm-2d` Canvas или SVG, в `kodfilm-miniature` 3D с «кукольной» физикой и движением на двойках.
 
-Как подключаем ядро: в каждом стилевом репо `kodfilm` подключён как git submodule в папку `core/` и закреплён на теге (например `core-v1`). Репо стиля добавляет только свой рендерер и свои фильмы. Когда 3D-движок обновляется, стили поднимают тег, когда им удобно.
+Как подключаем ядро: в каждом стилевом репо `kodfilm` подключён как git submodule в папку `core/` и закреплён на коммите. `engine` в корне стилевого репо это ссылка на `core/engine`, поэтому `node core/render.mjs` работает без копий. Репо стиля добавляет только свой код и свои фильмы. Когда 3D-движок обновляется, стиль поднимает submodule, когда ему удобно.
 
 ## Что уже лежит не на месте
 
-- `engine/chalk.js` (мел на доске) и фильм `films/most.js` относятся к 2D. Они переедут в `kodfilm-2d`, когда репо будет создан. До тех пор не трогаем, чтобы не сломать текущие рендеры.
+- `engine/chalk.js` (мел на доске) и фильм `films/most.js` относятся к 2D. Их копия уже живёт в [`kodfilm-2d`](https://github.com/IlyaMargolin/kodfilm-2d), и дальше 2D развиваем там. Здесь они остаются, пока на них завязаны старые рендеры.
 - В `studio/STYLES.md` есть 2D-стили («Дисней 60-х, тушь и акварель», «Мел на чёрном», «Живописный нуар»). Они разнесены по семействам в `families/`.
 
-## Как завести репо стиля
+## Новый стиль
+Если появится стиль, который не ложится ни в одно семейство: создать пустой приватный репо `kodfilm-<стиль>`, дать доступ [приложению Claude](https://github.com/apps/claude/installations/select_target), и дальше Claude собирает его по образцу трёх существующих: ядро в `core/`, свой код в корне, тестовый фильм в `films/`.
 
-1. Создать пустой приватный репо: [kodfilm-toon](https://github.com/new?name=kodfilm-toon&visibility=private), [kodfilm-2d](https://github.com/new?name=kodfilm-2d&visibility=private), [kodfilm-miniature](https://github.com/new?name=kodfilm-miniature&visibility=private).
-2. Дать к нему доступ приложению Claude: [github.com/apps/claude](https://github.com/apps/claude/installations/select_target).
-3. Дальше Claude переносит туда заготовку из `families/<стиль>.md`, подключает `core/` и делает первый тестовый кадр.
+Для рендера на GitHub в каждом стилевом репо нужен секрет `CORE_TOKEN` (fine-grained токен с *Contents: read* к `kodfilm`), иначе ферма не скачает приватное ядро.

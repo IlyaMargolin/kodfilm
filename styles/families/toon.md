@@ -1,6 +1,6 @@
 # kodfilm-toon: 3D, отрисованное как рисунок
 
-Репо: `kodfilm-toon` (пока не создан). Ядро: `kodfilm` как `core/`.
+Репо: [`kodfilm-toon`](https://github.com/IlyaMargolin/kodfilm-toon). Ядро: `kodfilm` как `core/`.
 
 ## Эталоны из ЛСР
 Suits, The Witness, Fish Night, Blindspot, Ice, The Tall Grass, The Very Pulse of the Machine, Jibaro (живописная часть), For He Can Creep. Подробно в [../ldr-catalog.md](../ldr-catalog.md).
