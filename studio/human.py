@@ -90,7 +90,7 @@ def skin_material(tone=(0.62, 0.43, 0.33)):
     m = bpy.data.materials.new('skin'); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
     b = N['Principled BSDF']
     b.inputs['Base Color'].default_value = (*tone, 1); b.inputs['Roughness'].default_value = 0.48
-    for k, v in (('Subsurface Weight', 1.0), ('Subsurface Scale', 0.012), ('Specular IOR Level', 0.45), ('Coat Weight', 0.06), ('Coat Roughness', 0.35)):
+    for k, v in (('Subsurface Weight', 0.6), ('Subsurface Scale', 0.006), ('Specular IOR Level', 0.45), ('Coat Weight', 0.06), ('Coat Roughness', 0.35)):
         if k in b.inputs: b.inputs[k].default_value = v
     if 'Subsurface Radius' in b.inputs: b.inputs['Subsurface Radius'].default_value = (1.0, 0.35, 0.2)
     # поры и неровность кожи: мелкий шум в бамп, лёгкая пятнистость цвета

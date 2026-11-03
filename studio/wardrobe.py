@@ -5,7 +5,7 @@ cloak(body) — плащ с капюшоном поверх любой одеж�
 import bpy, bmesh, math
 from mathutils import Vector
 
-def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.85, sheen=0.4, scale=380):
+def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.9, sheen=0.12, scale=380):
     m = bpy.data.materials.new(name); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
     b = N['Principled BSDF']; b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Roughness'].default_value = rough
     if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value = sheen; b.inputs['Sheen Roughness'].default_value = 0.4
@@ -118,11 +118,11 @@ def robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=0
 def hood_obj(body, arm, mat, J=None):
     J = J or {k: Vector(v) for k, v in body['joints'].items()}
     head = J['mixamorig:Head']; neck = J['mixamorig:Neck']
-    c = head + Vector((0, -0.025, 0.075))
+    c = head + Vector((0, 0.005, 0.075))
     bpy.ops.mesh.primitive_uv_sphere_add(segments=48, ring_count=32, radius=1, location=c)
     h = bpy.context.object; h.name = 'hood'
     bm = bmesh.new(); bm.from_mesh(h.data)
-    kill = [v for v in bm.verts if v.co.y > 0.35 and v.co.z > -0.55]       # открытое лицо (вперёд = +Y)
+    kill = [v for v in bm.verts if v.co.y > 0.5 and v.co.z > -0.6 and abs(v.co.x) < 0.8]       # открытое лицо (вперёд = +Y)
     bmesh.ops.delete(bm, geom=kill, context='VERTS')
     for v in bm.verts:
         x, y, z = v.co

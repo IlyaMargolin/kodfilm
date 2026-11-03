@@ -17,6 +17,7 @@ ap.add_argument('--samples', type=int, default=96)
 ap.add_argument('--fogk', type=float, default=0.5, help='множитель плотности тумана в Cycles: настоящий объём гуще, чем в EEVEE')
 ap.add_argument('--ev', type=float, default=None, help='экспозиция; в Cycles по умолчанию +0.9: нет фальшивого фонового света EEVEE, честный свет темнее')
 ap.add_argument('--passes', action='store_true', help='слои AOV: EXR (глубина, туман, нормали) + 16-бит PNG глубины')
+ap.add_argument('--hero', default=None, help='заменить актёра главной роли (id из studio/cast/actors), например pilgrim')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
@@ -38,7 +39,14 @@ fogobj = world.fog(scn.fog * (a.fogk if a.engine == 'cycles' else 1.0), size=(40
 
 # ---------- постановка героя ----------
 import cast
-hero = world.Actor(cast.resolve(scn.hero, os.path.dirname(os.path.abspath(a.script))))
+FILM_DIR = os.path.dirname(os.path.abspath(a.script)); HERO = a.hero or scn.hero
+hero = world.Actor(cast.resolve(HERO, FILM_DIR))
+SPEC = cast.spec(HERO, FILM_DIR) or {}
+if SPEC.get('human'):        # живой человек: своё тело (MakeHuman CC0) на скелете мокапа + костюм
+    import human, wardrobe
+    hs = dict(SPEC['human']); macro = {k: hs[k] for k in ('gender', 'age', 'muscle', 'weight', 'height', 'proportions') if k in hs}
+    body = human.build(hero.arm, skin=human.skin_material(tuple(hs['skin'])) if hs.get('skin') else None, **macro)
+    if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
 speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 pos = Vector((0, 0, 0)); yaw = 0.0

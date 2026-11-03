@@ -22,9 +22,23 @@ def resolve(name, film_dir=None):
         for r in fc['roles']:
             if r['role'].lower() == key or r['actor'] == key: key = r['actor']; break
     for k, a in A.items():
+        if key in (k, a['name'].lower()) and a.get('human'): return a['human'].get('skeleton', 'Soldier.glb')
         if key in (k, a['name'].lower()) and a.get('model'): return a['model']
         if a.get('model') and key == a['model'].lower().replace('.glb', ''): return a['model']
     return name + ('' if name.endswith('.glb') else '.glb')
+
+def spec(name, film_dir=None):
+    """Полная карточка актёра по имени из сценария (или None). Для «живых» людей в карточке есть блок human:
+    {"skeleton": "Soldier.glb", "gender": 1, "age": 0.5, "muscle": 0.5, "weight": 0.5, "height": 0.5, "proportions": 0.6,
+     "skin": [r,g,b], "wardrobe": "robe", "cloth": [r,g,b], "hood": true}"""
+    A = actors(); key = name.strip().lower()
+    fc = film_cast(film_dir) if film_dir else None
+    if fc:
+        for r in fc['roles']:
+            if r['role'].lower() == key or r['actor'] == key: key = r['actor']; break
+    for k, a in A.items():
+        if key in (k, a['name'].lower()): return a
+    return None
 
 def roster():
     """Сводка: кто в труппе, кто в кастинге, кто в каких фильмах."""
