@@ -14,6 +14,8 @@ ap.add_argument('--taa', type=int, default=10); ap.add_argument('--board', actio
 ap.add_argument('--director', default=None)
 ap.add_argument('--engine', default='eevee', choices=['eevee', 'cycles'], help='cycles — трассировка путей (для GPU-фермы на Kaggle)')
 ap.add_argument('--samples', type=int, default=96)
+ap.add_argument('--fogk', type=float, default=0.35, help='множитель плотности тумана в Cycles: настоящий объём гуще, чем в EEVEE')
+ap.add_argument('--ev', type=float, default=None, help='экспозиция; в Cycles по умолчанию +0.9: нет фальшивого фонового света EEVEE, честный свет темнее')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
@@ -23,12 +25,13 @@ if a.director: scn.director = a.director
 
 # ---------- мир ----------
 sc = world.new_scene(a.w, a.h, FPS, engine='CYCLES' if a.engine == 'cycles' else 'BLENDER_EEVEE', TAA=a.samples if a.engine == 'cycles' else a.taa)
+sc.view_settings.exposure = a.ev if a.ev is not None else (0.9 if a.engine == 'cycles' else sc.view_settings.exposure)
 if a.lens != 'none':
     import lens; lens.setup(sc, a.lens)
 if scn.world == 'sponza': world.set_sponza()
 world.hdri(scn.sky[0], scn.sky[1])
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
-fogobj = world.fog(scn.fog, size=(40, 24, 16)) if scn.fog > 0 else None
+fogobj = world.fog(scn.fog * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
 
 # ---------- постановка героя ----------
 import cast
