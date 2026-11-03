@@ -1,2 +1,8 @@
 node_modules/
 out/
+assets/hdri/
+assets/chars/
+assets/sets/
+assets/scans/
+__pycache__/
+*.deb
