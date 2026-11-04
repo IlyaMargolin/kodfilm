@@ -1,6 +1,6 @@
 # Съёмка: сценарий -> мир -> постановка героя -> раскадровка режиссёра -> камеры -> кадры.
 # python studio/film.py -- --script films/hram/script.txt --out out/hram --w 1280 --h 720 [--frames all|1-100|10,20] [--board]
-import sys, os, json, math, argparse
+import sys, os, json, math, argparse, random
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import bpy
 from mathutils import Vector, Euler, Quaternion
@@ -275,7 +275,9 @@ for si, sh in enumerate(shots):
     moving = sh.move in ('track', 'follow', 'lead')
     # ручная камера — только как приём (крупно, на напряжении, камера стоит). Сопровождение — долли/Steadicam,
     # общие — штатив/кран: тряска там читается как ошибка оператора, а не как эмоция
-    ORBIT = min(180.0, 40.0 * (f1 - f0) / FPS) * (1 if sh.azim >= 0 else -1)
+    # в слоумо облёт идёт по сцене медленнее — угол делим на скорость, чтобы на экране камера шла с прежней скоростью
+    VIB = 1.0 if (sh.move in ('track', 'lead', 'follow', 'passby') and any(b.action == 'run' and b.start <= sh.start < b.start + b.dur for b in scn.beats)) else 0.0
+    ORBIT = min(270.0, 40.0 * (f1 - f0) / FPS / getattr(sh, 'speed', 1.0)) * (1 if sh.azim >= 0 else -1)
     HAND = 1.0 if (not moving and not sh.poi and sh.size in ('MS', 'MCU', 'CU', 'ECU')) else 0.0
     def raw_pos(f, off=0.0, kd=1.0, de=0.0):
         """Где стоит камера в кадре f без сглаживания: азимут+off, дистанция×kd, высота+de."""
@@ -291,6 +293,18 @@ for si, sh in enumerate(shots):
              'track': 1.0 - 0.05 * u, 'follow': 1.0 - 0.05 * u, 'lead': 1.0 - 0.05 * u}.get(sh.move, 1.0)
         anchor = P if moving else subject(f0, sh.target)
         q = anchor + (dv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k * kd
+        if sh.move in ('passby', 'pan'):
+            # камера стоит на пути героя: точка пролёта — 65% плана; passby — 1 м вбок, 45 см над землёй;
+            # pan — далеко сбоку (длинный объектив), фон смазывается панорамой
+            fp = int(f0 + 0.65 * (f1 - f0)); pp = track_pts[min(max(fp, 1), TOTAL) - 1]
+            fwp = Vector((math.cos(pp['yaw'] + math.pi / 2), math.sin(pp['yaw'] + math.pi / 2), 0))
+            sidev = Vector((fwp.y, -fwp.x, 0)) * (1 if math.sin(az) >= 0 else -1)
+            ground = min(pp['fl'].z, pp['fr'].z)
+            if sh.move == 'passby':
+                q = pp['rootS'] + sidev * 1.0 * kd + fwp * 0.3; q.z = ground + 0.45 + 0.1 * de
+            else:
+                q = pp['rootS'] + sidev * dist * 1.2 * kd; q.z = pp['headS'].z - 0.2 + 0.05 * de
+            anchor = pp['rootS']
         q.z = max(0.15, q.z)
         return clamp(ray_block(anchor, clamp(q))), P     # реальная точка: в стенах здания, перед препятствием
     # «оператор ищет точку»: проверяем ВЕСЬ путь камеры — не внутри стены/цепи/колонны и ничего не перекрывает героя
@@ -303,7 +317,7 @@ for si, sh in enumerate(shots):
             allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0
             for fm in fs:
                 q, Pq = raw_pos(fm, o, kd, de)
-                if not path_ok(q, Pq): continue
+                if not path_ok(q, Pq, 0.3 if sh.move == 'passby' else 0.5): continue
                 scr = (0.0, 0.0)
                 if sh.comp:      # куда композиция поставит героя из этой точки (как в покадровом цикле ниже)
                     pp_ = track_pts[min(fm, TOTAL) - 1]; fw_ = Vector((math.cos(pp_['yaw'] + math.pi / 2), math.sin(pp_['yaw'] + math.pi / 2), 0))
@@ -337,14 +351,19 @@ for si, sh in enumerate(shots):
         else:
             pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
             aimv = P.copy()
-        hh = HAND * Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
+        # вибрация подвеса на скорости: мелкая (≈1–2 мм) и частая, как у камеры на машине/кране — не «качка» ручной камеры
+        if VIB:
+            rv = random.Random(si * 100003 + f)
+            hv = Vector((rv.uniform(-1, 1), rv.uniform(-1, 1), rv.uniform(-1, 1))) * 0.0015 * VIB
+        else: hv = Vector((0, 0, 0))
+        hh = hv + HAND * Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует
         off = pos - (P if moving else Vector((0, 0, 0)))
         smooth_pos = off if smooth_pos is None else smooth_pos.lerp(off, 0.12 if moving else 0.25)
-        smooth_aim = aimv if smooth_aim is None else smooth_aim.lerp(aimv, 0.6 if moving else 0.35)
+        smooth_aim = aimv if smooth_aim is None else smooth_aim.lerp(aimv, 0.6 if moving else 0.8 if sh.move in ('passby', 'pan') else 0.35)
         pos_now = smooth_pos + (P if moving else Vector((0, 0, 0)))
         cam.location = pos_now + hh
-        if not sh.poi and not sh.pov and not path_ok(cam.location, P):
+        if not sh.poi and not sh.pov and not path_ok(cam.location, P, 0.3 if sh.move == 'passby' else 0.5):
             cam.location = clamp(ray_block(P, cam.location)); smooth_pos = cam.location - (P if moving else Vector((0, 0, 0)))
         dvec = smooth_aim - cam.location
         yaw_d = math.atan2(dvec.y, dvec.x); pit_d = math.atan2(dvec.z, math.hypot(dvec.x, dvec.y))
@@ -390,21 +409,51 @@ for si, sh in enumerate(shots):
     cams.append((f0, f1, cam))
 
 if fogobj: fogobj.hide_viewport = False
+
+# ---------- слоумо: перерасчёт времени ----------
+# План со speed<1 снят «высокоскоростной камерой»: выходной кадр берёт сцену в дробный момент (subframe),
+# скорость входит и выходит плавной рампой (~0.25 с), затвор укорачивается вместе со скоростью — каждая пылинка резкая.
+RAMP = 0.25 * FPS
+def _speed_at(sf):
+    for (f0, f1, _), sh in zip(cams, shots):
+        sp = getattr(sh, 'speed', 1.0)
+        if sp != 1.0 and f0 <= sf <= f1:
+            k = min(1.0, (sf - f0) / RAMP * 2.5, (f1 - sf) / RAMP)      # вход быстрый (почти по склейке), выход — разгоном
+            k = k * k * (3 - 2 * k)
+            return 1.0 + (sp - 1.0) * max(0.0, k)
+    return 1.0
+OUT = []; sf = 1.0
+while sf <= TOTAL + 1e-6:
+    OUT.append(sf); sf += _speed_at(sf)
+TOTAL_OUT = len(OUT)
+def src2out(t):
+    """время сцены (с) → время фильма (с)"""
+    fs = t * FPS + 1
+    for o in range(1, TOTAL_OUT):
+        if OUT[o] >= fs: return (o - 1 + (fs - OUT[o - 1]) / max(1e-6, OUT[o] - OUT[o - 1])) / FPS
+    return (TOTAL_OUT - 1 + (fs - OUT[-1])) / FPS
+if TOTAL_OUT != TOTAL: print('слоумо: кадров сцены', TOTAL, '→ кадров фильма', TOTAL_OUT, flush=True)
+for b in scn.beats:
+    b_end = src2out(b.start + b.dur); b.start = src2out(b.start); b.dur = b_end - b.start
+for st in steps: st['t'] = src2out(st['t'])
+for sh in shots: sh.start, sh.end = src2out(sh.start), src2out(sh.end)
+
 # метаданные для звука и монтажа
 os.makedirs(a.out, exist_ok=True)
-json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL, duration=TOTAL / FPS, steps=steps,
+json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL_OUT, duration=TOTAL_OUT / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
 if a.save: bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a.save))
 # ---------- рендер ----------
+# номера кадров дальше — кадры ФИЛЬМА (после слоумо); OUT[o-1] — какой момент сцены в нём снят
 if a.board:
     frames = [int((s.start + s.end) / 2 * FPS) + 1 for s in shots]
 elif a.frames == 'none': frames = []
-elif a.frames == 'all': frames = list(range(1, TOTAL + 1))
-elif '-' in a.frames: s0, s1 = map(int, a.frames.split('-')); frames = list(range(s0, min(TOTAL, s1) + 1))
+elif a.frames == 'all': frames = list(range(1, TOTAL_OUT + 1))
+elif '-' in a.frames: s0, s1 = map(int, a.frames.split('-')); frames = list(range(s0, min(TOTAL_OUT, s1) + 1))
 else: frames = [int(x) for x in a.frames.split(',')]
 per = math.ceil(len(frames) / a.chunks); frames = frames[a.chunk * per:(a.chunk + 1) * per]
 # бюджет сэмплов по крупности: лицо на крупном — никогда не «мыло» (больше лучей, строже адаптивный порог);
@@ -412,10 +461,12 @@ per = math.ceil(len(frames) / a.chunks); frames = frames[a.chunk * per:(a.chunk 
 QS = {'ECU': (1.6, 0.006), 'CU': (1.5, 0.006), 'MCU': (1.3, 0.008), 'MS': (1.1, 0.01), 'FS': (1.0, 0.012), 'WS': (0.8, 0.015), 'EWS': (0.7, 0.02)}
 base_s = sc.cycles.samples if a.engine == 'cycles' else 0
 for f in frames:
-    ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= f <= f1), len(cams) - 1); cam = cams[ci][2]
+    sf = OUT[min(f, TOTAL_OUT) - 1]; fi = int(sf); fr = sf - fi
+    ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= sf <= f1), len(cams) - 1); cam = cams[ci][2]
+    sc.render.motion_blur_shutter = 0.5 * _speed_at(sf)      # 180° при любой скорости: в слоумо выдержка короче
     if base_s:
         ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
         sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th
-    sc.camera = cam; sc.frame_set(f)
+    sc.camera = cam; sc.frame_set(fi, subframe=fr)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)
