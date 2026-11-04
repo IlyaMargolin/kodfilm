@@ -351,10 +351,10 @@ for si, sh in enumerate(shots):
         else:
             pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
             aimv = P.copy()
-        # вибрация подвеса на скорости: мелкая (≈1–2 мм) и частая, как у камеры на машине/кране — не «качка» ручной камеры
+        # вибрация подвеса на скорости: мелкая (≈2–4 мм) и частая, как у камеры на машине/кране — не «качка» ручной камеры
         if VIB:
             rv = random.Random(si * 100003 + f)
-            hv = Vector((rv.uniform(-1, 1), rv.uniform(-1, 1), rv.uniform(-1, 1))) * 0.0015 * VIB
+            hv = Vector((rv.uniform(-1, 1), rv.uniform(-1, 1), rv.uniform(-1, 1))) * 0.003 * VIB
         else: hv = Vector((0, 0, 0))
         hh = hv + HAND * Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует
