@@ -451,7 +451,16 @@ for si, sh in enumerate(shots):
         else: fpt = subject(f, 'chest')
         foc.location = aimv if sh.pov else fpt
         if KEY: foc.keyframe_insert('location', frame=f)
-        if f == (f0 + f1) // 2: mid_cf = (cam.location.copy(), foc.location.copy())
+        if f == (f0 + f1) // 2:
+            mid_cf = (cam.location.copy(), foc.location.copy())
+            # для автопроверки кадра (studio/qc.py): где лицо на экране, его размер, расстояние до глаза
+            if not sh.poi and not sh.pov and sh.size in ('ECU', 'CU', 'MCU', 'MS'):
+                pe_ = track_pts[min(max(f, 1), TOTAL) - 1]; fc_ = (pe_['elS'] + pe_['erS']) / 2
+                R_ = cam.rotation_euler.to_matrix(); v_ = R_.transposed() @ (fc_ - cam.location)
+                if v_.z < -0.05:
+                    k_ = sh.lens / SENSOR_W / -v_.z
+                    sh.qc = dict(face=[round(0.5 + v_.x * k_, 3), round(0.5 - v_.y * k_ * a.w / a.h, 3)],
+                                 face_r=round(0.11 * k_, 3), eye_m=round((fpt - cam.location).length, 2))
         if not sh.poi and not sh.pov and KEY:
             gl.place(f, subject(f, 'head'), cam.location, fwd, SUN_DIR)
     # диафрагма по фону (как у оператора с рулеткой): фон размыт на заданную долю кадра, лицо целиком в резкости
@@ -463,6 +472,7 @@ for si, sh in enumerate(shots):
         nf = gaffer.fstop_for(sh.size, sh.lens, SENSOR_W, sdist, bg, sh.fstop)
         if nf != sh.fstop: print(f'  диафрагма {sh.fstop:.1f} → {nf:.1f} (фокус {sdist:.2f} м, фон {bg:.1f} м)', flush=True)
         sh.fstop = nf; cd.dof.aperture_fstop = nf
+        if getattr(sh, 'qc', None): sh.qc['focus_m'] = round(sdist, 2)
     print('shot', si, sh.size, sh.comp, sh.screen, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))
@@ -504,7 +514,7 @@ for sh in shots: sh.start, sh.end = src2out(sh.start), src2out(sh.end)
 os.makedirs(a.out, exist_ok=True)
 json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL_OUT, duration=TOTAL_OUT / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None)) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None), qc=getattr(s, 'qc', None)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
@@ -544,6 +554,9 @@ for f in frames:
     sc.camera = cam; sc.frame_set(fi, subframe=fr)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)
+if a.board and frames:   # ОТК раскадровки: брак (фокус, тёмное лицо, окраска теней, пёстрый кадр) ловится до фермы
+    import qc
+    qc.main(os.path.abspath(a.out))
 if LOOK.get('post') and frames:
     import subprocess
     post = os.path.join(LOOK['_dir'], LOOK['post'])
