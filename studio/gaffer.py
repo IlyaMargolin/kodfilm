@@ -7,6 +7,7 @@
 #   4. Дымка (haze) — множитель плотности тумана: контровой свет и окна становятся видимыми лучами и ореолом.
 #   5. Свет только на актёра (light linking): ключ и заливка не рисуют пятен на колоннах — как флаги и сетки на площадке.
 #   6. motivated: ключ приходит со стороны реального источника (солнце/окно), если тот рядом с короткой стороной.
+#   7. капюшон/шляпа: ключ ниже, заливка сильнее (см. place).
 import math
 import bpy
 from mathutils import Vector
@@ -26,8 +27,8 @@ RIM_W = {'ECU': 120.0, 'CU': 160.0, 'MCU': 190.0, 'MS': 240.0}
 
 class ShotLights:
     """Ключ, заливка и контровой одного плана. Энергии ключуются по кадрам: вне плана свет выключен."""
-    def __init__(self, sc, name, light, receivers, pal=None):
-        self.L = light; self.on = {}
+    def __init__(self, sc, name, light, receivers, pal=None, hooded=False):
+        self.L = light; self.on = {}; self.hooded = hooded
         col = bpy.data.collections.get('actor_lit')
         if col is None:
             col = bpy.data.collections.new('actor_lit')
@@ -53,7 +54,8 @@ class ShotLights:
 
     def energies(self, size):
         L = self.L; k = KEY_W.get(size, 0.0) * L['key']
-        return dict(key=k, fill=k * L['fill'] * 1.6, rim=RIM_W.get(size, 0.0) * L['rim'] * 0.6)
+        hf = 1.6 if self.hooded else 1.0     # под капюшоном заливка работает за ключ: поля капюшона режут верхний свет
+        return dict(key=k, fill=k * L['fill'] * 1.6 * hf, rim=RIM_W.get(size, 0.0) * L['rim'] * 0.6)
 
     def window(self, size, f0, f1):
         e = self.energies(size)
@@ -71,10 +73,13 @@ class ShotLights:
         if L.get('motivated') and sun_dir is not None:
             s2 = Vector((sun_dir.x, sun_dir.y, 0))
             if s2.length > 1e-3 and s2.normalized().dot(right * -short) > 0.5: short = -short   # солнце явно с другой стороны
-        a = math.radians(L['side']) * short
+        # под капюшоном свет входит только через открытый проём: ключ «из-за плеча» (110–150°) упирается в боковину
+        a = math.radians(min(L['side'], 50) if self.hooded else L['side']) * short
         kd = (to_cam * math.cos(a) + right * math.sin(a)).normalized()
         o = self.objs
-        o['key'].location = head + kd * 2.4 + Vector((0, 0, 0.9))
+        # 7. капюшон: ключ опускается почти до уровня глаз (+0.25 м), иначе поля капюшона кладут на лицо чёрную тень —
+        #    так на площадке светят монахов и персонажей в капюшонах: низкий мягкий ключ под поля
+        o['key'].location = head + kd * 2.4 + Vector((0, 0, 0.25 if self.hooded else 0.9))
         # заливка: с камеры, низко и широко — поднимает тени, не создаёт второй тени
         o['fill'].location = head + (to_cam - right * short * 0.35).normalized() * 3.0 + Vector((0, 0, 0.1))
         # контровой: сзади, со стороны, противоположной ключу (перекрёстный), выше головы

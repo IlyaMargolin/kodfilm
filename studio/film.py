@@ -58,12 +58,13 @@ import cast
 FILM_DIR = os.path.dirname(os.path.abspath(a.script)); HERO = a.hero or scn.hero
 hero = world.Actor(cast.resolve(HERO, FILM_DIR))
 SPEC = cast.spec(HERO, FILM_DIR) or {}
-body = None
+body = None; HOODED = False
 if SPEC.get('human'):        # живой человек: своё тело (MakeHuman CC0) на скелете мокапа + костюм
     import human, wardrobe
     hs = dict(SPEC['human'])
     body = human.build_actor(hero.arm, hs)
     if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
+    HOODED = hs.get('wardrobe') == 'robe' and hs.get('hood', True)
     if hs.get('groom', True):   # волосы и борода прядями (Principled Hair)
         import groom
         groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.03 if hs.get('gender', 1) > 0.5 else 0),
@@ -309,7 +310,9 @@ for si, sh in enumerate(shots):
     _bt = next((b for b in scn.beats if b.start <= sh.start + 0.05 < b.start + b.dur), scn.beats[-1])
     sh.palette = palette.for_shot(scn, _bt.emotion)
     from crew import emotions as _emo; sh.detail = _emo.slowmo_detail(getattr(sh, 'speed', 1.0), _bt.action)
-    gl = gaffer.ShotLights(sc, f'{si:02d}', LIGHT, RECEIVERS, sh.palette)
+    # лицо под капюшоном читается только с уровня глаз или чуть снизу: сверху камера видит ткань, а не лицо
+    if HOODED and sh.size in ('ECU', 'CU', 'MCU') and sh.elev > -4: sh.elev = -4.0
+    gl = gaffer.ShotLights(sc, f'{si:02d}', LIGHT, RECEIVERS, sh.palette, hooded=HOODED)
     gl.window('' if (sh.poi or sh.pov) else sh.size, f0, f1)
     smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
     moving = sh.move in ('track', 'follow', 'lead')
