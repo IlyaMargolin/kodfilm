@@ -4,6 +4,7 @@
 #   python3 studio/idea.py "Путник входит в пустой храм, останавливается, смотрит на свет и в решимости бежит к нему"
 #   python3 studio/idea.py --name hram2 --farm "..."         # сразу на GPU-ферму (Kaggle) через GitHub Actions
 #   python3 studio/idea.py --board "..."                     # раскадровка: кадр из середины каждого плана (минуты)
+#   python3 studio/idea.py --render "мультяшный путник идёт по лесу"   # стиль по словам (toon) → его движок → mp4
 #
 # Разбор правилами (без внешних сервисов): глаголы → действия, слова чувств → эмоции, жанровые слова → режиссёр.
 # Это нижний уровень: Claude в чате пишет идею развёрнуто и подаёт сюда уже ясные фразы — по одной на бит.
@@ -119,19 +120,29 @@ def build(text, name=None, director=None, hero=None, style=None):
 
 if __name__ == '__main__':
     ap = argparse.ArgumentParser(); ap.add_argument('idea', nargs='+'); ap.add_argument('--name'); ap.add_argument('--director'); ap.add_argument('--hero'); ap.add_argument('--style', help='restyle/neon, toon/cel …; none — без стиля; пусто — по словам идеи')
-    ap.add_argument('--board', action='store_true'); ap.add_argument('--farm', action='store_true'); ap.add_argument('--width', type=int, default=1920); ap.add_argument('--samples', type=int, default=64)
+    ap.add_argument('--board', action='store_true'); ap.add_argument('--farm', action='store_true'); ap.add_argument('--render', action='store_true', help='стиль со своим движком: сразу отрендерить mp4'); ap.add_argument('--width', type=int, default=1920); ap.add_argument('--samples', type=int, default=64)
     a = ap.parse_args()
     title, hero, style, txt = build(' '.join(a.idea), a.name, a.director, a.hero, a.style)
     st = styles.find(); sname = style.partition('/')[0]
-    if style and not styles.look_file(style, st):
-        s_ = st.get(sname, {})
-        print(f'стиль {style} ({s_.get("stage", "?")}): рисует в своём движке — ядро отдаёт сценарий и раскадровку;',
-              f'рендер: cd {s_.get("_dir", "kodfilm-" + sname)} && {s_.get("render", "node core/render.mjs --film <film>")}')
-    d = os.path.join(ROOT, 'films', title); os.makedirs(d, exist_ok=True); p = os.path.join(d, 'script.txt')
+    d =os.path.join(ROOT, 'films', title); os.makedirs(d, exist_ok=True); p = os.path.join(d, 'script.txt')
     open(p, 'w').write(txt); print(txt); print('→', os.path.relpath(p, ROOT))
     if a.board:   # раскадровка быстрым движком: кадр на план — постановка видна за минуты
         py = os.environ.get('BLENDER_PY', '/home/claude/bvenv/bin/python')
         subprocess.run([py, os.path.join(ROOT, 'studio/film.py'), '--script', p, '--hero', hero, '--board', '--w', '960', '--out', os.path.join(ROOT, 'out', title + '_board')], check=True)
+    s_ = st.get(sname, {}) if style and not styles.look_file(style, st) else {}
+    if s_:   # стиль со своим движком (toon, miniature, 2d): сценарий и раскадровка ядра → films/<имя>.js стиля
+        fs_ = s_.get('entry', {}).get('from_script')
+        meta = os.path.join(ROOT, 'out', title + '_board', 'meta.json')
+        if not fs_: print(f'стиль {style}: в style.json нет entry.from_script — сценарий в движок стиля не передать')
+        else:
+            r = subprocess.run(fs_.split() + [p] + ([meta] if os.path.isfile(meta) else []) + ['--out', f'films/{title}.js'],
+                               cwd=s_['_dir'], capture_output=True, text=True); print(r.stdout.strip() or r.stderr.strip())
+            if r.returncode == 0 and a.render:
+                out = os.path.join(ROOT, 'out', f'{title}_{sname}.mp4')
+                subprocess.run(['node', 'core/render.mjs', '--film', f'films/{title}.js', '--out', out], cwd=s_['_dir'], check=True)
+                print('фильм в стиле', style, '→', os.path.relpath(out, ROOT))
+    if a.farm and s_:
+        print('ферма считает трассировку ядра; стиль', style, 'рисует в своём движке — --farm пропущен, нужен --render'); a.farm = False
     if a.farm:    # финал: трассировка путей на ферме (сценарий должен быть в репозитории — коммит и пуш)
         rel = os.path.relpath(p, ROOT)
         subprocess.run(['git', '-C', ROOT, 'add', rel], check=True)
