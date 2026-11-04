@@ -18,6 +18,7 @@ ap.add_argument('--fogk', type=float, default=0.5, help='множитель пл
 ap.add_argument('--ev', type=float, default=None, help='экспозиция; в Cycles по умолчанию +0.9: нет фальшивого фонового света EEVEE, честный свет темнее')
 ap.add_argument('--passes', action='store_true', help='слои AOV: EXR (глубина, туман, нормали) + 16-бит PNG глубины')
 ap.add_argument('--hero', default=None, help='заменить актёра главной роли (id из studio/cast/actors), например pilgrim')
+ap.add_argument('--save', default=None, help='сохранить сцену .blend (проверка постановки)')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
@@ -47,6 +48,10 @@ if SPEC.get('human'):        # живой человек: своё тело (Mak
     hs = dict(SPEC['human']); macro = {k: hs[k] for k in ('gender', 'age', 'muscle', 'weight', 'height', 'proportions') if k in hs}
     body = human.build(hero.arm, skin=human.skin_material(tuple(hs.get('skin', (0.62, 0.43, 0.33))), tuple(hs.get('hair', (0.03, 0.022, 0.016))), hs.get('stubble', 0.6 if hs.get('gender', 1) > 0.5 else 0)), **macro)
     if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
+# клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
+for _act in ('idle', 'run'):
+    if _act in hero.actions and 'walk' in hero.actions:
+        print('align', _act, round(math.degrees(hero.align_facing(_act, 'walk')), 1), 'deg', flush=True)
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
 speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 pos = Vector((0, 0, 0)); yaw = 0.0
@@ -96,6 +101,9 @@ for i, bt in enumerate(scn.beats):
     act = ACT[bt.action]; s = int(bt.start * FPS) + 1; e = int((bt.start + bt.dur) * FPS) + 1
     tr = tracks[i % 2]; ac = hero.actions[act]
     s0 = max(1, s - (B if i % 2 == 0 else B // 2)); e0 = min(TOTAL + B, e + (B if i % 2 == 0 else B // 2))
+    # предвосхищение: герой «знает», что остановится — стойка вплывает во время торможения и полностью
+    # собрана в момент остановки, а не доворачивается после (живой человек гасит шаг уже в позу)
+    if i % 2 and i > 0 and scn.beats[i - 1].a and not bt.a: s0 = max(1, s - B)
     st = tr.strips.new(f'{act}{i}', s0, ac)
     L = ac.frame_range[1] - ac.frame_range[0]
     st.action_frame_start, st.action_frame_end = ac.frame_range
@@ -124,6 +132,9 @@ for f in range(1, TOTAL + 1, 2):
         b.rotation_quaternion = Quaternion((1, 0, 0), pv * (0.6 if j == 0 else 0.4)); b.keyframe_insert('rotation_quaternion', frame=f)
 ad.action = None
 ls = look_tr.strips.new('look', 1, look); ls.blend_type = 'COMBINE'; ls.extrapolation = 'HOLD'
+
+# опора стоп: ступня в контакте с полом прибита (IK), не скользит и не проворачивается
+if not os.environ.get('KF_NOPLANT'): print('plant', hero.plant_feet(1, TOTAL), flush=True)
 
 # ---------- раскадровка ----------
 shots = director.plan(scn, scn.director)
@@ -345,9 +356,11 @@ json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
+if a.save: bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a.save))
 # ---------- рендер ----------
 if a.board:
     frames = [int((s.start + s.end) / 2 * FPS) + 1 for s in shots]
+elif a.frames == 'none': frames = []
 elif a.frames == 'all': frames = list(range(1, TOTAL + 1))
 elif '-' in a.frames: s0, s1 = map(int, a.frames.split('-')); frames = list(range(s0, min(TOTAL, s1) + 1))
 else: frames = [int(x) for x in a.frames.split(',')]

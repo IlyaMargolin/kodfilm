@@ -238,6 +238,13 @@ def _build(arm, name, skin, subdiv, **macro):
     for e in arm.data.edit_bones:
         if e.name in newJ:
             d = e.tail - e.head; e.head = inv @ newJ[e.name]; e.tail = e.head + d
+    # длина кости до сустава-ребёнка (направление и roll прежние, анимация не меняется):
+    # хвост голени = голеностоп, хвост плеча = локоть — на этом держится IK опоры стоп
+    for e in arm.data.edit_bones:
+        kids = [c for c in e.children if c.name in newJ]
+        if len(kids) == 1 and e.name in newJ:
+            d = (e.tail - e.head).normalized(); L = (kids[0].head - e.head).dot(d)
+            if L > 0.5: e.tail = e.head + d * L     # хвосты у мокап-скелета бывают «в 40 м» — приводим к суставу
     bpy.ops.object.mode_set(mode='OBJECT')
     for o in list(arm.children):
         if o.type == 'MESH': bpy.data.objects.remove(o)
