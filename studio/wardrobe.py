@@ -5,22 +5,50 @@ cloak(body) — плащ с капюшоном поверх любой одеж�
 import bpy, bmesh, math
 from mathutils import Vector
 
-def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.3, scale=380):
+def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.25, scale=1.0):
+    """Домотканая шерсть саржевого переплетения (как на макро-референсах): нити основы и утка ≈1.5 мм,
+    диагональный рубчик саржи 2/2, пушок волокон, неровная пряжа (утолщения нити — «слабы»), потёртость.
+    Всё процедурно в координатах объекта — без UV-швов тела; scale <1 — нить крупнее."""
     m = bpy.data.materials.new(name); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
-    b = N['Principled BSDF']; b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Roughness'].default_value = rough
-    if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value = sheen; b.inputs['Sheen Roughness'].default_value = 0.4
+    b = N['Principled BSDF']; b.inputs['Roughness'].default_value = rough
+    # пушок шерсти — sheen, но тонированный цветом нити: белый sheen (по умолчанию) делает тёмную ткань серо-пыльной
+    if 'Sheen Weight' in b.inputs:
+        b.inputs['Sheen Weight'].default_value = sheen; b.inputs['Sheen Roughness'].default_value = 0.35
+        if 'Sheen Tint' in b.inputs: b.inputs['Sheen Tint'].default_value = (*[min(1.0, c * 4) for c in color], 1)
     tc = N.new('ShaderNodeTexCoord')
-    wv = N.new('ShaderNodeTexWave'); wv.inputs['Scale'].default_value = scale; wv.inputs['Distortion'].default_value = 2; wv.inputs['Detail'].default_value = 3
-    nz = N.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 7; nz.inputs['Detail'].default_value = 6
-    L.new(tc.outputs['Object'], wv.inputs['Vector']); L.new(tc.outputs['Object'], nz.inputs['Vector'])
-    mx = N.new('ShaderNodeMath'); mx.operation = 'MULTIPLY_ADD'; mx.inputs[1].default_value = 0.3
-    L.new(wv.outputs['Fac'], mx.inputs[0]); L.new(nz.outputs['Fac'], mx.inputs[2])
-    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.6; bp.inputs['Distance'].default_value = 0.003
-    L.new(mx.outputs[0], bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
-    # потёртость: светлее на выступах
+    def wave(direction, sc_, prof='SIN'):
+        w = N.new('ShaderNodeTexWave'); w.wave_type = 'BANDS'; w.bands_direction = direction; w.wave_profile = prof
+        w.inputs['Scale'].default_value = sc_ * scale; w.inputs['Distortion'].default_value = 1.3; w.inputs['Detail'].default_value = 1.0
+        w.inputs['Detail Scale'].default_value = 3.0
+        L.new(tc.outputs['Object'], w.inputs['Vector']); return w.outputs['Fac']
+    def math(op, a, b_=None, v=None):
+        n_ = N.new('ShaderNodeMath'); n_.operation = op
+        for k, x in enumerate((a, b_)):
+            if x is None: continue
+            if isinstance(x, (int, float)): n_.inputs[k].default_value = x
+            else: L.new(x, n_.inputs[k])
+        if v is not None: n_.inputs[2].default_value = v
+        return n_.outputs[0]
+    twill = wave('DIAGONAL', 470)                         # рубчик саржи по диагонали
+    weft = wave('Z', 660)                                 # уток — поперёк (по высоте одежды)
+    warp = math('MAXIMUM', wave('X', 660), wave('Y', 660))  # основа — вдоль
+    fib = N.new('ShaderNodeTexNoise'); fib.inputs['Scale'].default_value = 5200 * scale; fib.inputs['Detail'].default_value = 2
+    L.new(tc.outputs['Object'], fib.inputs['Vector'])
+    # неровная пряжа: шум, вытянутый вдоль нити
+    mp = N.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (420 * scale, 420 * scale, 26 * scale); L.new(tc.outputs['Object'], mp.inputs['Vector'])
+    slub = N.new('ShaderNodeTexNoise'); slub.inputs['Scale'].default_value = 1.0; slub.inputs['Detail'].default_value = 3; L.new(mp.outputs[0], slub.inputs['Vector'])
+    big = N.new('ShaderNodeTexNoise'); big.inputs['Scale'].default_value = 7; big.inputs['Detail'].default_value = 6; L.new(tc.outputs['Object'], big.inputs['Vector'])
+    h = math('MULTIPLY_ADD', weft, 0.3); L.new(math('MULTIPLY', twill, 0.5), h.node.inputs[2])
+    h = math('ADD', h, math('MULTIPLY', warp, 0.2))
+    h = math('ADD', h, math('MULTIPLY', fib.outputs['Fac'], 0.18))
+    h = math('ADD', h, math('MULTIPLY', slub.outputs['Fac'], 0.28))
+    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.55; bp.inputs['Distance'].default_value = 0.0008
+    L.new(h, bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
+    # цвет: нить светлее на гребне переплетения, темнее в промежутках; пятна потёртости и грязи крупным шумом
     cr = N.new('ShaderNodeValToRGB'); cr.color_ramp.elements[0].color = (color[0] * 0.55, color[1] * 0.55, color[2] * 0.55, 1)
-    cr.color_ramp.elements[1].color = (color[0] * 1.8, color[1] * 1.6, color[2] * 1.4, 1)
-    L.new(nz.outputs['Fac'], cr.inputs['Fac']); L.new(cr.outputs['Color'], b.inputs['Base Color'])
+    cr.color_ramp.elements[1].color = (color[0] * 1.45, color[1] * 1.35, color[2] * 1.25, 1)
+    tone = math('MULTIPLY_ADD', big.outputs['Fac'], 0.6); L.new(math('MULTIPLY', h, 0.45), tone.node.inputs[2])
+    L.new(tone, cr.inputs['Fac']); L.new(cr.outputs['Color'], b.inputs['Base Color'])
     return m
 
 def _w(body, v, names):

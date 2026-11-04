@@ -105,6 +105,8 @@ def plan(scene, p_name, seed=7):
         # смысловой минимум: эмоциональный бит снимается хотя бы 2 планами (лицо + то, что он видит / пространство)
         need = 3 if (bt.action == 'run' and bt.epic and bt.dur > 2.5) else 2 if (bt.emotion or bi == 0 or bt.action == 'stand') and bt.dur > 2.4 else 1
         n = max(need, math.ceil(bt.dur / (asl * PACE) - 0.25))
+        # экшен: планы 1–2.5 с (короче — каша, длиннее — провисает); установочный первый план сцены длиннее и шире
+        if bt.action == 'run': n = max(1, min(max(n, math.ceil(bt.dur / 2.5)), int(bt.dur / 1.0)))
         cuts = [bt.start + bt.dur * i / n for i in range(n + 1)]
         for k in range(n):
             # сначала то, что смысл бита ставит первым; дальше — с весами профиля, без повторов и прыжков

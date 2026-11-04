@@ -296,7 +296,8 @@ for si, sh in enumerate(shots):
         if sh.move in ('passby', 'pan'):
             # камера стоит на пути героя: точка пролёта — 65% плана; passby — 1 м вбок, 45 см над землёй;
             # pan — далеко сбоку (длинный объектив), фон смазывается панорамой
-            fp = int(f0 + 0.65 * (f1 - f0)); pp = track_pts[min(max(fp, 1), TOTAL) - 1]
+            # пролёт в конце плана: герой выходит за край кадра — и склейка через 2–3 кадра, уезжающего не держим
+            fp = int(f0 + (0.85 if sh.move == 'passby' else 0.65) * (f1 - f0)); pp = track_pts[min(max(fp, 1), TOTAL) - 1]
             fwp = Vector((math.cos(pp['yaw'] + math.pi / 2), math.sin(pp['yaw'] + math.pi / 2), 0))
             sidev = Vector((fwp.y, -fwp.x, 0)) * (1 if math.sin(az) >= 0 else -1)
             ground = min(pp['fl'].z, pp['fr'].z)
@@ -351,6 +352,10 @@ for si, sh in enumerate(shots):
         else:
             pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
             aimv = P.copy()
+            if sh.move == 'passby':
+                # камера не панорамирует: смотрит в точку пролёта (чуть навстречу герою), он влетает и выходит из кадра
+                fpp = int(f0 + 0.85 * (f1 - f0)); ppp = track_pts[min(max(fpp, 1), TOTAL) - 1]
+                aimv = subject(fpp, sh.target) + Vector((math.cos(ppp['yaw'] + math.pi / 2), math.sin(ppp['yaw'] + math.pi / 2), 0)) * -0.6
         # вибрация подвеса на скорости: мелкая (≈2–4 мм) и частая, как у камеры на машине/кране — не «качка» ручной камеры
         if VIB:
             rv = random.Random(si * 100003 + f)
@@ -418,7 +423,10 @@ def _speed_at(sf):
     for (f0, f1, _), sh in zip(cams, shots):
         sp = getattr(sh, 'speed', 1.0)
         if sp != 1.0 and f0 <= sf <= f1:
-            k = min(1.0, (sf - f0) / RAMP * 2.5, (f1 - sf) / RAMP)      # вход быстрый (почти по склейке), выход — разгоном
+            if sp < 1.0:   # слоумо до момента: замедление на подходе (30% плана), момент на минимуме, разгон после (25%)
+                k = min(1.0, (sf - f0) / max(1.0, 0.3 * (f1 - f0)), (f1 - sf) / max(1.0, 0.25 * (f1 - f0)))
+            else:          # андеркранк ровный, короткие рампы у склеек
+                k = min(1.0, (sf - f0) / RAMP * 2.5, (f1 - sf) / RAMP)
             k = k * k * (3 - 2 * k)
             return 1.0 + (sp - 1.0) * max(0.0, k)
     return 1.0
@@ -460,10 +468,20 @@ per = math.ceil(len(frames) / a.chunks); frames = frames[a.chunk * per:(a.chunk 
 # общий план — фигура мелкая, шум прячет денойзер, время экономим (правило «где можно мягко»)
 QS = {'ECU': (1.6, 0.006), 'CU': (1.5, 0.006), 'MCU': (1.3, 0.008), 'MS': (1.1, 0.01), 'FS': (1.0, 0.012), 'WS': (0.8, 0.015), 'EWS': (0.7, 0.02)}
 base_s = sc.cycles.samples if a.engine == 'cycles' else 0
+# LOD по крупности (как у ILM: 2 000 деталей на общем, 20 000 на крупном): дети прядей и подразделение тела.
+# Корни прядей не меняются — меняется только густота интерполяции, поэтому между планами волосы не «прыгают»
+HAIR_K = {'ECU': 1.0, 'CU': 1.0, 'MCU': 0.85, 'MS': 0.6, 'FS': 0.35, 'WS': 0.2, 'EWS': 0.1}
+SUBD = {'ECU': 2, 'CU': 2, 'MCU': 2, 'MS': 2, 'FS': 1, 'WS': 1, 'EWS': 1}
+psets = {ps.settings: (ps.settings.rendered_child_count, ps.settings.radius_scale) for o in sc.objects if o.type == 'MESH' for ps in o.particle_systems}
+subs = [(m, m.render_levels) for o in sc.objects if o.type == 'MESH' and o.particle_systems for m in o.modifiers if m.type == 'SUBSURF']
 for f in frames:
     sf = OUT[min(f, TOTAL_OUT) - 1]; fi = int(sf); fr = sf - fi
     ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= sf <= f1), len(cams) - 1); cam = cams[ci][2]
     sc.render.motion_blur_shutter = 0.5 * _speed_at(sf)      # 180° при любой скорости: в слоумо выдержка короче
+    size_ = 'CU' if shots[ci].poi else shots[ci].size
+    for st_, (n_, w_) in psets.items():   # меньше прядей — каждая толще: покрытие и цвет шевелюры не меняются
+        k_ = HAIR_K.get(size_, 1.0); st_.rendered_child_count = max(2, int(round(n_ * k_))); st_.radius_scale = w_ * min(3.0, 1.0 / k_)
+    for m_, lv in subs: m_.render_levels = min(lv, SUBD.get(size_, lv))
     if base_s:
         ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
         sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th

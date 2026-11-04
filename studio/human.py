@@ -259,7 +259,12 @@ def skin_material(tone=(0.62, 0.43, 0.33), hair=(0.03, 0.022, 0.016), stubble=0.
     nzf = N.new('ShaderNodeTexNoise'); nzf.inputs['Scale'].default_value = 2600; nzf.inputs['Detail'].default_value = 2; L.new(tc.outputs['Object'], nzf.inputs['Vector'])
     hb2 = N.new('ShaderNodeMath'); hb2.operation = 'MULTIPLY_ADD'; L.new(nzf.outputs['Fac'], hb2.inputs[0]); hb2.inputs[1].default_value = 0.6; L.new(hb.outputs[0], hb2.inputs[2]); hb = hb2
     rr = N.new('ShaderNodeMapRange'); rr.inputs['To Min'].default_value = 0.38; rr.inputs['To Max'].default_value = 0.62; L.new(nz2.outputs['Fac'], rr.inputs['Value']); L.new(rr.outputs['Result'], b.inputs['Roughness'])
-    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.22; bp.inputs['Distance'].default_value = 0.0005
+    if tex is not None:
+        # морщины, складки и поры с фото: тёмное на карте кожи — углубление (как «cavity» у скульпторов)
+        bw = N.new('ShaderNodeRGBToBW'); L.new(tex.outputs['Color'], bw.inputs[0])
+        hb3 = N.new('ShaderNodeMath'); hb3.operation = 'MULTIPLY_ADD'; L.new(bw.outputs[0], hb3.inputs[0]); hb3.inputs[1].default_value = 1.8
+        L.new(hb.outputs[0], hb3.inputs[2]); hb = hb3
+    bp = N.new('ShaderNodeBump'); bp.inputs['Strength'].default_value = 0.3; bp.inputs['Distance'].default_value = 0.0005
     L.new(hb.outputs[0], bp.inputs['Height']); L.new(bp.outputs['Normal'], b.inputs['Normal'])
     return m
 

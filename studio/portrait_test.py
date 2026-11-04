@@ -38,6 +38,8 @@ if os.environ.get('STUDIO', '1') == '1':
     area('key', head + Vector((-1.2, 1.4, 0.9)), 160, 1.6); area('fill', head + Vector((1.5, 1.0, 0.1)), 30, 2.0, (0.9, 0.95, 1.0))
     area('rim', head + Vector((0.6, -1.3, 0.8)), 120, 0.8, (1.0, 0.9, 0.8))
 os.makedirs(out, exist_ok=True)
+if os.environ.get('DENOISE') == 'off': sc.cycles.use_denoising = False
+elif os.environ.get('DENOISE') == 'albedo': sc.cycles.denoising_input_passes = 'RGB_ALBEDO'
 W = int(os.environ.get('RES', '1200')); sc.render.resolution_x = sc.render.resolution_y = W
 CAMS = [int(c) for c in os.environ.get('CAMS', '0,1,2').split(',')]
 for i, (az, el, d, lens) in enumerate(((20, 0, 0.75, 85), (70, 5, 0.75, 85), (0, -5, 3.2, 50))):
