@@ -27,4 +27,10 @@ if [ ! -f mh/3dobjs/base.obj ]; then
   rm -rf /tmp/mpfb2 && git clone -q --depth 1 https://github.com/makehumancommunity/mpfb2.git /tmp/mpfb2
   mkdir -p mh && cp -r /tmp/mpfb2/src/mpfb/data/3dobjs /tmp/mpfb2/src/mpfb/data/targets /tmp/mpfb2/src/mpfb/data/rigs /tmp/mpfb2/src/mpfb/data/textures mh/ && cp /tmp/mpfb2/LICENSE.ASSETS.md mh/
 fi
+# Системные ассеты MakeHuman (CC0): фото-кожа, брови, ресницы, глаза — официальный релиз MakeHuman-2, все файлы CC0
+if [ ! -d mh/system/skins ]; then
+  curl -sSfL -o /tmp/mh_system_CC0.zip https://github.com/Makehuman-2/MH2_Asset_Repository_CCO/releases/download/CC0/mh_system_CC0.zip
+  mkdir -p mh/system && python3 -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" /tmp/mh_system_CC0.zip /tmp/mh_sys
+  d=$(dirname "$(find /tmp/mh_sys -type d -name skins | head -1)"); cp -r "$d"/* mh/system/ && rm -rf /tmp/mh_sys /tmp/mh_system_CC0.zip
+fi
 echo "ассеты на месте"

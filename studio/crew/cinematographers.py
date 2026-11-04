@@ -34,4 +34,12 @@ DPS = {
                        comp=dict(centered=3.0, vanishing=1.2),
                        light=dict(key=1.0, fill=0.6, rim=0.3, haze=0.0, temp=5000, side=0, motivated=False),
                        pairs=['anderson'], desc='фронтально, ровный свет, пастель'),
+    'amundsen':   dict(lens=dict(wide=35, mid=75, close=100), fstop=2.0, move='orbit', hand=0.3, sym=0.0, low=0.9,
+                       comp=dict(thirds=1.6, triangular=1.3, scale=1.1),
+                       light=dict(key=1.3, fill=0.2, rim=1.6, haze=1.2, temp=3400, side=150, motivated=True),
+                       pairs=['bay'], desc='длинная оптика сжимает слои, режимное время, контровой, облёт снизу (Трансформеры)'),
+    'navarro':    dict(lens=dict(wide=21, mid=35, close=50), fstop=2.8, move='push', hand=0.15, sym=0.3, low=0.8,
+                       comp=dict(scale=2.0, thirds=1.2, negative=1.1),
+                       light=dict(key=1.0, fill=0.2, rim=1.2, haze=1.1, temp=6500, side=120, motivated=True),
+                       pairs=['deltoro'], desc='экстремальный контраст, холодный ключ с янтарём, низко над водой (Тихоокеанский рубеж)'),
 }

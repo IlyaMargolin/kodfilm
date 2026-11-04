@@ -24,11 +24,15 @@ def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.3, scale=
     return m
 
 def _w(body, v, names):
-    s = 0.0
+    """доля веса костей names среди всех костей вершины (нормировано, как в Armature-деформере:
+    лицевые группы MakeHuman без костей в скелете не занижают долю головы)"""
+    s = tot = 0.0
     for g in v.groups:
         n = body.vertex_groups[g.group].name
+        if not n.startswith('mixamorig:'): continue
+        tot += g.weight
         if any(k in n for k in names): s += g.weight
-    return s
+    return s / tot if tot > 1e-6 else 0.0
 
 def _rig_like(o, body, arm, mix=None, drop=('Arm', 'Hand', 'Shoulder')):
     """веса с тела: Data Transfer -> применить; mix={'mixamorig:Hips': 0.5} подмешивает жёсткую кость.
@@ -67,10 +71,11 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     me = body.data.copy(); top = bpy.data.objects.new('robe_top', me); bpy.context.scene.collection.objects.link(top)
     top.matrix_world = body.matrix_world
     bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); bm.normal_update()
-    kill = []
+    kill = []; ps = body.get('proxy_start', 10 ** 9)
     for v in bm.verts:
         bv = body.data.vertices[v.index]
         if _w(body, bv, ('Hand', 'Head', 'Neck')) > 0.5 or _w(body, bv, ('Leg', 'Foot', 'Toe')) > 0.5: kill.append(v); continue
+        if v.index >= ps or any(f.material_index > 0 for f in v.link_faces): kill.append(v); continue     # брови/ресницы/глаза — не ткань
         fore = _w(body, bv, ('ForeArm',)); armw = _w(body, bv, ('Arm',))
         off = 0.036 + sleeve * fore
         v.co += v.normal * off
@@ -155,11 +160,15 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     sk.modifiers.new('sub', 'SUBSURF').render_levels = 1
     # тело под одеждой не рендерим (как в играх и студийных крауд-системах): ноги не протыкают юбку, торс — рясу
     hid = body.vertex_groups.get('covered') or body.vertex_groups.new(name='covered')
+    ps = body.get('proxy_start', 10 ** 9)
     for v in body.data.vertices:
-        if _w(body, v, ('Hand', 'Head', 'Neck', 'Foot', 'Toe')) < 0.2 and (v.co.z - 0) > 0.12:
+        if v.index < ps and _w(body, v, ('Hand', 'Head', 'Neck', 'Foot', 'Toe')) < 0.2 and (v.co.z - 0) > 0.12:
             hid.add([v.index], 1.0, 'REPLACE')
     mk = body.modifiers.new('under_clothes', 'MASK'); mk.vertex_group = 'covered'; mk.invert_vertex_group = True
-    while body.modifiers.find('under_clothes') > 0: bpy.context.view_layer.objects.active = body; bpy.ops.object.modifier_move_up(modifier='under_clothes')
+    # маска — после скелета и сглаживания (CorrectiveSmooth сверяет число вершин с ORCO), но до subsurf
+    want = max((k for k, m in enumerate(body.modifiers) if m.type in ('ARMATURE', 'CORRECTIVE_SMOOTH')), default=-1) + 1
+    with bpy.context.temp_override(object=body):
+        while body.modifiers.find('under_clothes') > want: bpy.ops.object.modifier_move_up(modifier='under_clothes')
     # верёвочный пояс прячет шов верха и юбки
     bpy.ops.mesh.primitive_torus_add(major_radius=1, minor_radius=0.012, major_segments=96, minor_segments=12, location=(hip.x, hip.y + 0.0, top_z - 0.01))
     belt = bpy.context.object; belt.name = 'rope_belt'; belt.scale = (r0 + 0.012, (r0 + 0.012) * 0.82, 1)

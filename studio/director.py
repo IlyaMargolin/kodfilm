@@ -51,6 +51,7 @@ MOVE_WHY = {
     'follow':    'за спиной на Steadicam: видим то, к чему он идёт, мы — его тень',
     'lead':      'камера отступает перед ним: лицо и порыв, пространство открывается за спиной',
     'slow_tilt': 'панорама взгляда: ведём глаз зрителя туда, куда смотрит герой',
+    'orbit':     'низкий облёт: камера кружит вокруг героя — момент осознания становится монументальным',
 }
 SIZE_WHY = {'EWS': 'масштаб места', 'WS': 'герой в пространстве', 'FS': 'тело и жест целиком', 'MS': 'жест и лицо вместе',
             'MCU': 'эмоция с контекстом плеч', 'CU': 'мысль на лице', 'ECU': 'деталь, которую нельзя пропустить', 'INS': 'то, что важно миру'}
@@ -116,7 +117,12 @@ def plan(scene, p_name, seed=7):
             if size == 'INS': poi = az; az = 0
             if p['sym'] > 0.7 and size in ('EWS', 'WS') and not pov: az = 180 if az > 90 else 0   # симметрия по оси
             mv = {'slow': mv, 'dolly': 'dolly' if mv in ('static', 'slow_push') else mv, 'locked': mv, 'push': 'push' if size in ('MCU', 'CU') and mv not in ('track', 'follow', 'lead') else mv,
-                  'hand': mv, 'track': mv, 'float': mv}[p['move']]
+                  'hand': mv, 'track': mv, 'float': mv,
+                  # облёт (Бэй): на остановке/эмоции крупный и средний планы — низкий облёт вокруг героя
+                  'orbit': 'orbit' if (size in ('FS', 'MS', 'MCU', 'CU') and bt.action not in ('walk', 'run') and (bt.epic or bt.emotion or bt.tension)) else
+                           ('push' if size in ('MCU', 'CU') and mv not in ('track', 'follow', 'lead') else mv)}[p['move']]
+            if mv == 'orbit' and prev and prev.move == 'orbit': mv = 'push' if size in ('MCU', 'CU') else 'slow_push'   # приём, а не манера: не подряд
+            if mv == 'orbit': el = min(el, -12)      # облёт всегда снизу: герой монументален
             if bt.epic and size in ('CU', 'MCU') and p['move'] in ('push', 'slow') and mv not in ('track', 'follow', 'lead'): mv = 'push'
             if p['move'] == 'push' and mv == 'push' and bt.action in ('walk', 'run') and size != 'INS': mv = 'lead'   # на движущегося героя «наезд» = ведём спереди
             # движение через склейку: после движущейся камеры статичный план «подхватывает» движение медленным наездом

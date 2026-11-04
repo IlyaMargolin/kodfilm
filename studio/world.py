@@ -22,8 +22,17 @@ def new_scene(w, h, fps, engine='BLENDER_EEVEE', RT=False, TAA=16):
     if engine == 'CYCLES':
         # Настоящая трассировка путей: физичные блики, отражения, каустика, объёмные лучи сквозь арки.
         cy = sc.cycles
-        cy.samples = TAA; cy.use_adaptive_sampling = True; cy.adaptive_threshold = 0.02
+        cy.samples = TAA; cy.use_adaptive_sampling = True
         cy.use_denoising = True
+        # «без мыла»: денойзер видит альбедо и нормали (не размывает поры, пряди, переплетение ткани),
+        # фильтр пикселя 1.0 вместо 1.5 (на 1.5 Blackman-Harris смягчает весь кадр), адаптивный порог строже
+        for k, v in (('denoising_input_passes', 'RGB_ALBEDO_NORMAL'), ('denoising_prefilter', 'ACCURATE'), ('denoising_quality', 'HIGH'),
+                     ('filter_width', 1.0), ('adaptive_threshold', 0.01), ('adaptive_min_samples', 16), ('texture_limit_render', 'OFF')):
+            try: setattr(cy, k, v)
+            except Exception: pass
+        try: sc.render.film_filter_width = 1.0
+        except Exception: pass
+        cy.light_sampling_threshold = 0.01
         cy.max_bounces = 8; cy.diffuse_bounces = 3; cy.glossy_bounces = 4; cy.transmission_bounces = 8; cy.volume_bounces = 1
         cy.caustics_reflective = True; cy.caustics_refractive = True; cy.blur_glossy = 0.5
         cy.volume_step_rate = 2.0; cy.volume_max_steps = 256

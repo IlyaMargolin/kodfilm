@@ -6,7 +6,7 @@
  "human": {
   "skeleton": "Soldier.glb",
   "gender": 1.0,
-  "age": 0.55,
+  "age": 0.6,
   "muscle": 0.6,
   "weight": 0.45,
   "height": 0.62,
@@ -22,7 +22,24 @@
    0.062,
    0.05
   ],
-  "hood": true
+  "hood": true,
+  "race": {
+   "caucasian": 0.8,
+   "african": 0.12,
+   "asian": 0.08
+  },
+  "anatomy": [
+   "masculine",
+   "gaunt",
+   "aged",
+   "asym"
+  ],
+  "grey": 0.3,
+  "beard": 0.035,
+  "skin_texture": "middleage_caucasian_male",
+  "eyebrows": "eyebrow010",
+  "eyelashes": "eyelashes02",
+  "eyes": "brown"
  },
  "look": "высокий, худой, в тяжёлой шерстяной рясе с глубоким капюшоном; лицо в тени",
  "height": 1.86,

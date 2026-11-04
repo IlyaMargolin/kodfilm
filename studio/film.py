@@ -43,14 +43,15 @@ import cast
 FILM_DIR = os.path.dirname(os.path.abspath(a.script)); HERO = a.hero or scn.hero
 hero = world.Actor(cast.resolve(HERO, FILM_DIR))
 SPEC = cast.spec(HERO, FILM_DIR) or {}
+body = None
 if SPEC.get('human'):        # живой человек: своё тело (MakeHuman CC0) на скелете мокапа + костюм
     import human, wardrobe
-    hs = dict(SPEC['human']); macro = {k: hs[k] for k in ('gender', 'age', 'muscle', 'weight', 'height', 'proportions') if k in hs}
-    body = human.build(hero.arm, subdiv=hs.get('subdiv', 2), skin=human.skin_material(tuple(hs.get('skin', (0.62, 0.43, 0.33))), tuple(hs.get('hair', (0.03, 0.022, 0.016))), hs.get('stubble', 0.6 if hs.get('gender', 1) > 0.5 else 0)), **macro)
+    hs = dict(SPEC['human'])
+    body = human.build_actor(hero.arm, hs)
     if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
     if hs.get('groom', True):   # волосы и борода прядями (Principled Hair)
         import groom
-        groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.009 if hs.get('gender', 1) > 0.5 else 0),
+        groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.03 if hs.get('gender', 1) > 0.5 else 0),
                     hooded=hs.get('wardrobe') == 'robe' and hs.get('hood', True))
 # клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
 for _act in ('idle', 'run'):
@@ -152,7 +153,10 @@ for f in range(1, TOTAL + 1):
     M = hero.arm.matrix_world
     hd = M @ hero.arm.pose.bones[hero.head].head
     fl = M @ hero.arm.pose.bones[footL].head; fr = M @ hero.arm.pose.bones[footR].head
-    track_pts.append(dict(head=hd.copy(), root=hero.root.location.copy(), yaw=hero.root.rotation_euler.z, fl=fl.copy(), fr=fr.copy()))
+    ey = human.eyes_world(body, hero.arm) if body is not None else None
+    ey = ey or [hd + Vector((0, 0, 0.04))] * 2
+    track_pts.append(dict(head=hd.copy(), root=hero.root.location.copy(), yaw=hero.root.rotation_euler.z, fl=fl.copy(), fr=fr.copy(),
+                          el=ey[0].copy(), er=ey[1].copy()))
 
 # сглаженная траектория для камеры: оператор ведёт не голову (она качается на каждом шаге), а «центр» движения.
 # Гаусс без задержки — камера как будто знает, куда герой пойдёт (опытный оператор Steadicam/долли так и работает)
@@ -166,6 +170,9 @@ def _gauss(vals, sig):
     return out
 for p_, r_, h_ in zip(track_pts, _gauss([p['root'] for p in track_pts], 0.3 * FPS), _gauss([p['head'] for p in track_pts], 0.2 * FPS)):
     p_['rootS'] = r_; p_['headS'] = h_
+# глаза для фокуса: лёгкое сглаживание (0.08 с) — фокус-пуллер ведёт глаз, но не дрожит на каждом шаге
+for p_, l_, r_ in zip(track_pts, _gauss([p['el'] for p in track_pts], 0.08 * FPS), _gauss([p['er'] for p in track_pts], 0.08 * FPS)):
+    p_['elS'] = l_; p_['erS'] = r_
 
 # шаги: стопа «прилипла» к полу — скорость упала после движения (ноги не скользят, так что это точный момент удара)
 steps = []
@@ -268,13 +275,16 @@ for si, sh in enumerate(shots):
     moving = sh.move in ('track', 'follow', 'lead')
     # ручная камера — только как приём (крупно, на напряжении, камера стоит). Сопровождение — долли/Steadicam,
     # общие — штатив/кран: тряска там читается как ошибка оператора, а не как эмоция
+    ORBIT = min(180.0, 40.0 * (f1 - f0) / FPS) * (1 if sh.azim >= 0 else -1)
     HAND = 1.0 if (not moving and not sh.poi and sh.size in ('MS', 'MCU', 'CU', 'ECU')) else 0.0
     def raw_pos(f, off=0.0, kd=1.0, de=0.0):
         """Где стоит камера в кадре f без сглаживания: азимут+off, дистанция×kd, высота+de."""
         u = (f - f0) / max(1, f1 - f0); P = subject(f, sh.target); p = track_pts[min(max(f, 1), TOTAL) - 1]
         fw = Vector((math.cos(p['yaw'] + math.pi / 2), math.sin(p['yaw'] + math.pi / 2), 0))
         ref = fw if moving else fwd0
-        az = math.radians(sh.azim + off); el = math.radians(sh.elev + de)
+        # облёт: азимут плавно (ease in-out) уходит на ORBIT° за план — 120° на 3 с, полный круг даёт склейка из нескольких
+        orb = ORBIT * (3 * u * u - 2 * u * u * u) if sh.move == 'orbit' else 0.0
+        az = math.radians(sh.azim + off + orb); el = math.radians(sh.elev + de)
         dv = Vector((ref.x * math.cos(az) - ref.y * math.sin(az), ref.x * math.sin(az) + ref.y * math.cos(az), 0))
         # сопровождение (track/follow/lead) с микро-наездом ~5% за план: глаз чувствует «подход» к герою, зритель — нет
         k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u,
@@ -359,7 +369,12 @@ for si, sh in enumerate(shots):
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
         if KEY: cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
         # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке
-        fpt = P if sh.poi else (subject(f, 'head') if sh.size in ('ECU', 'CU', 'MCU', 'MS') else subject(f, 'chest'))
+        # портрет: резкость на ближний к камере глаз (не центр черепа: на 85 мм f/2.8 9 см до глаз = «мыло» лица)
+        if sh.poi: fpt = P
+        elif sh.size in ('ECU', 'CU', 'MCU', 'MS'):
+            pe = track_pts[min(max(f, 1), TOTAL) - 1]
+            fpt = min((pe['elS'], pe['erS']), key=lambda e: (e - cam.location).length)
+        else: fpt = subject(f, 'chest')
         foc.location = aimv if sh.pov else fpt
         if KEY: foc.keyframe_insert('location', frame=f)
         # контровой свет плана: как у оператора на площадке, за героем напротив камеры — отделяет от фона
@@ -392,8 +407,15 @@ elif a.frames == 'all': frames = list(range(1, TOTAL + 1))
 elif '-' in a.frames: s0, s1 = map(int, a.frames.split('-')); frames = list(range(s0, min(TOTAL, s1) + 1))
 else: frames = [int(x) for x in a.frames.split(',')]
 per = math.ceil(len(frames) / a.chunks); frames = frames[a.chunk * per:(a.chunk + 1) * per]
+# бюджет сэмплов по крупности: лицо на крупном — никогда не «мыло» (больше лучей, строже адаптивный порог);
+# общий план — фигура мелкая, шум прячет денойзер, время экономим (правило «где можно мягко»)
+QS = {'ECU': (1.6, 0.006), 'CU': (1.5, 0.006), 'MCU': (1.3, 0.008), 'MS': (1.1, 0.01), 'FS': (1.0, 0.012), 'WS': (0.8, 0.015), 'EWS': (0.7, 0.02)}
+base_s = sc.cycles.samples if a.engine == 'cycles' else 0
 for f in frames:
-    cam = next((c for f0, f1, c in cams if f0 <= f <= f1), cams[-1][2])
+    ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= f <= f1), len(cams) - 1); cam = cams[ci][2]
+    if base_s:
+        ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
+        sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th
     sc.camera = cam; sc.frame_set(f)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)
