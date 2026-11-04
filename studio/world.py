@@ -60,13 +60,73 @@ def hdri(name, strength=1.0, rot=0.0):
 def set_sponza():
     bpy.ops.import_scene.gltf(filepath=A('sets', 'sponza', 'Sponza.gltf'))
     objs = [o for o in bpy.context.selected_objects]
-    for o in objs:
-        if o.type == 'MESH':
-            for m in o.data.materials:
-                if m and m.use_nodes:
-                    b = m.node_tree.nodes.get('Principled BSDF')
-                    if b and m.blend_method != 'OPAQUE': pass
+    naturalize(objs)
     return objs
+
+def naturalize(objs, rough_floor=0.42, breakup=0.14):
+    """Проход «натуралистичности» по материалам купленной/скачанной локации (как look-dev у Rockstar: ничего не
+    блестит как пластик). Игровые PBR-текстуры часто слишком гладкие: листья с roughness 0.2, цепи-хром.
+    - шероховатость поднимаем снизу (rough' = floor + (1-floor)·rough) и ломаем шумом — блик рваный, как у реальной поверхности;
+    - металл приглушаем: старое железо в пыли и окалине, не зеркало; база темнее, в углублениях грязь (шум крупного масштаба);
+    - листва (материалы с альфа-маской) пропускает свет: смесь с Translucent BSDF — контровое солнце светит сквозь лист."""
+    done = set()
+    for o in objs:
+        if o.type != 'MESH': continue
+        for m in o.data.materials:
+            if not m or m.name in done or not m.use_nodes: continue
+            done.add(m.name); nt = m.node_tree; N, L = nt.nodes, nt.links
+            b = next((n for n in N if n.type == 'BSDF_PRINCIPLED'), None)
+            if not b: continue
+            tc = N.new('ShaderNodeTexCoord')
+            nz = N.new('ShaderNodeTexNoise'); nz.inputs['Scale'].default_value = 3.5; nz.inputs['Detail'].default_value = 6
+            L.new(tc.outputs['Object'], nz.inputs['Vector'])
+            # шероховатость: подъём снизу + рваность
+            r_in = b.inputs['Roughness']
+            src = r_in.links[0].from_socket if r_in.is_linked else None
+            mr = N.new('ShaderNodeMapRange'); mr.inputs['To Min'].default_value = rough_floor; mr.inputs['To Max'].default_value = 1.0
+            if src: L.new(src, mr.inputs['Value'])
+            else: mr.inputs['Value'].default_value = r_in.default_value
+            br = N.new('ShaderNodeMath'); br.operation = 'MULTIPLY_ADD'
+            L.new(nz.outputs['Fac'], br.inputs[0]); br.inputs[1].default_value = breakup; br.inputs[2].default_value = -breakup / 2
+            ad = N.new('ShaderNodeMath'); ad.operation = 'ADD'; ad.use_clamp = True
+            L.new(mr.outputs['Result'], ad.inputs[0]); L.new(br.outputs['Value'], ad.inputs[1])
+            L.new(ad.outputs['Value'], r_in)
+            # металл: не зеркало — меньше металличности, в «грязных» местах ещё шероховатее и темнее
+            m_in = b.inputs['Metallic']
+            msrc = m_in.links[0].from_socket if m_in.is_linked else None
+            if msrc or m_in.default_value > 0.3:
+                mm = N.new('ShaderNodeMath'); mm.operation = 'MULTIPLY'; mm.inputs[1].default_value = 0.82
+                if msrc: L.new(msrc, mm.inputs[0])
+                else: mm.inputs[0].default_value = m_in.default_value
+                L.new(mm.outputs['Value'], m_in)
+                c_in = b.inputs['Base Color']
+                if c_in.is_linked:
+                    csrc = c_in.links[0].from_socket
+                    dirt = N.new('ShaderNodeTexNoise'); dirt.inputs['Scale'].default_value = 9.0; dirt.inputs['Detail'].default_value = 8
+                    L.new(tc.outputs['Object'], dirt.inputs['Vector'])
+                    ramp = N.new('ShaderNodeValToRGB'); ramp.color_ramp.elements[0].position = 0.45; ramp.color_ramp.elements[1].position = 0.7
+                    ramp.color_ramp.elements[0].color = (0.45, 0.4, 0.35, 1); ramp.color_ramp.elements[1].color = (1, 1, 1, 1)
+                    L.new(dirt.outputs['Fac'], ramp.inputs['Fac'])
+                    mix = N.new('ShaderNodeMix'); mix.data_type = 'RGBA'; mix.blend_type = 'MULTIPLY'; mix.inputs[0].default_value = 1.0
+                    L.new(csrc, mix.inputs[6]); L.new(ramp.outputs['Color'], mix.inputs[7]); L.new(mix.outputs[2], c_in)
+                    # в грязи шероховатость выше
+                    inv = N.new('ShaderNodeMath'); inv.operation = 'MULTIPLY_ADD'
+                    L.new(dirt.outputs['Fac'], inv.inputs[0]); inv.inputs[1].default_value = -0.35; inv.inputs[2].default_value = 0.3
+                    ad2 = N.new('ShaderNodeMath'); ad2.operation = 'ADD'; ad2.use_clamp = True
+                    L.new(ad.outputs['Value'], ad2.inputs[0]); L.new(inv.outputs['Value'], ad2.inputs[1]); L.new(ad2.outputs['Value'], r_in)
+            # листва: свет сквозь лист
+            if b.inputs['Alpha'].is_linked:
+                out = next((n for n in N if n.type == 'OUTPUT_MATERIAL'), None)
+                if out and out.inputs['Surface'].is_linked:
+                    tr = N.new('ShaderNodeBsdfTranslucent')
+                    if b.inputs['Base Color'].is_linked: L.new(b.inputs['Base Color'].links[0].from_socket, tr.inputs['Color'])
+                    tm = N.new('ShaderNodeMixShader'); tm.inputs['Fac'].default_value = 0.22
+                    tra = N.new('ShaderNodeBsdfTransparent'); am = N.new('ShaderNodeMixShader')
+                    L.new(b.inputs['Alpha'].links[0].from_socket, am.inputs['Fac'])
+                    L.new(b.outputs['BSDF'], tm.inputs[1]); L.new(tr.outputs['BSDF'], tm.inputs[2])
+                    L.new(tra.outputs['BSDF'], am.inputs[1]); L.new(tm.outputs['Shader'], am.inputs[2])
+                    L.new(am.outputs['Shader'], out.inputs['Surface'])
+    return len(done)
 
 def fog(density=0.02, color=(1, 0.95, 0.9), anisotropy=0.6, size=(60, 40, 30)):
     # объёмный туман: даёт «пыль в лучах» и воздушную перспективу

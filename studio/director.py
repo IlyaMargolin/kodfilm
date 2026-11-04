@@ -38,6 +38,22 @@ class Shot:
     pov: bool = False
     poi: tuple = None
     comp: str = ''
+    why: str = ''
+
+# Грамматика камеры: каждое движение — решение с причиной (как в режиссёрском сценарии оператора)
+MOVE_WHY = {
+    'static':    'штатив: камера не вмешивается — смотрим на поступок, а не на съёмку',
+    'slow_push': 'медленный наезд: внимание сгущается, зритель придвигается к мысли героя',
+    'push':      'наезд: момент решения — пространство сужается до лица',
+    'dolly':     'долли: пространство раскрывается параллаксом, место становится объёмным',
+    'slow_pull': 'отъезд: герой остаётся один, мир вокруг становится больше него',
+    'track':     'боковой трэвеллинг на рельсах: идём рядом с героем, ритм шага — ритм кадра; микро-наезд 5% незаметно сближает',
+    'follow':    'за спиной на Steadicam: видим то, к чему он идёт, мы — его тень',
+    'lead':      'камера отступает перед ним: лицо и порыв, пространство открывается за спиной',
+    'slow_tilt': 'панорама взгляда: ведём глаз зрителя туда, куда смотрит герой',
+}
+SIZE_WHY = {'EWS': 'масштаб места', 'WS': 'герой в пространстве', 'FS': 'тело и жест целиком', 'MS': 'жест и лицо вместе',
+            'MCU': 'эмоция с контекстом плеч', 'CU': 'мысль на лице', 'ECU': 'деталь, которую нельзя пропустить', 'INS': 'то, что важно миру'}
 
 def lens_for(p, size):
     return p['lens']['wide'] if size in ('EWS', 'WS') else p['lens']['mid'] if size in ('FS', 'MS') else p['lens']['close']
@@ -107,7 +123,7 @@ def plan(scene, p_name, seed=7):
             if prev and (prev.move in ('push', 'track', 'follow', 'lead') or prev.poi) and mv == 'static' and size != 'INS': mv = 'slow_push'
             sh = Shot(cuts[k], cuts[k + 1], size, az, el, lens_for(p, size), mv, tgt,
                       dutch=(p['dutch'] * (1 if (len(shots) % 2) else -1)) if bt.tension else 0.0,
-                      hand=p['hand'] + (0.25 if bt.action == 'run' else 0), fstop=p['fstop'], note=note, pov=pov,
+                      hand=p['hand'], fstop=p['fstop'], note=note, pov=pov,
                       thirds=0.0 if p['sym'] > 0.7 else (0.18 if size in ('MS', 'MCU', 'CU', 'FS') else 0.0))
             sh.fstop = TSTOP[size] * p['fstop'] / 2.8
             sh.poi = pois[poi] if poi else None
@@ -119,7 +135,15 @@ def plan(scene, p_name, seed=7):
                 if r.get('snap_axis') and mv not in ('track',): sh.azim = 180 if 90 < (sh.azim % 360) < 270 else 0
                 if sh.comp == 'scale': sh.lens = min(sh.lens, round(p['lens']['wide'] * 0.75))   # шире, чтобы фигура стала крошечной
                 if 'elev' in r and size not in ('EWS',): sh.elev = r['elev'] if r['elev'] < 0 else max(sh.elev, r['elev'])
+            sh.why = f"{SIZE_WHY.get(size, '')}; {MOVE_WHY.get(mv, mv)}"
             shots.append(sh); prev = sh
+    # финал: последний общий план — симметрия по оси и штатив. Взгляд не ищет, куда смотреть:
+    # фигура на линии схода, свет — цель. Ясный фокус важнее «интересной» асимметрии в последнем кадре фильма
+    if shots and shots[-1].size in ('EWS', 'WS') and not shots[-1].pov and not shots[-1].poi:
+        f_ = shots[-1]; f_.comp = 'centered'; f_.hand = 0.0
+        f_.azim = 180 if 90 < (f_.azim % 360) < 270 else 0
+        if f_.move in ('static', 'slow_push'): f_.move = 'static'
+        f_.why = 'финал: симметрия по оси, штатив — фигура на линии схода, свет как цель'
     return shots
 
 def describe(shots):

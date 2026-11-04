@@ -94,6 +94,9 @@ def _img(name):
 def skin_material(tone=(0.62, 0.43, 0.33), hair=(0.03, 0.022, 0.016), stubble=0.0):
     """Кожа: подповерхностное рассеяние, поры, румянец губ и век по UV-маскам MakeHuman (CC0),
     брови и щетина — по маске в атрибуте face_mask (R — брови, G — щетина), её считает build()."""
+    # тон задан как цвет на экране (sRGB, как в справочниках по коже), шейдеру нужен линейный: 0.55 sRGB = 0.26 линейно.
+    # Без перевода кожа выходит фарфоровой — «кукольное» лицо
+    tone = tuple(c ** 2.2 for c in tone)
     m = bpy.data.materials.new('skin'); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
     b = N['Principled BSDF']
     b.inputs['Roughness'].default_value = 0.5
@@ -250,6 +253,7 @@ def _build(arm, name, skin, subdiv, **macro):
         if o.type == 'MESH': bpy.data.objects.remove(o)
     ob.parent = arm; ob.matrix_parent_inverse = arm.matrix_world.inverted()
     am = ob.modifiers.new('body', 'ARMATURE'); am.object = arm
+    cs = ob.modifiers.new('corrective', 'CORRECTIVE_SMOOTH'); cs.rest_source = 'ORCO'; cs.smooth_type = 'LENGTH_WEIGHTED'; cs.iterations = 6; cs.factor = 0.7   # суставы без «заломов»
     if subdiv:
         s = ob.modifiers.new('sub', 'SUBSURF'); s.levels = 1; s.render_levels = subdiv
     # глаза: склера + радужка, на месте маркеров суставов глаз (с учётом сдвига головы при Т-позе)
@@ -282,6 +286,7 @@ def _build(arm, name, skin, subdiv, **macro):
         face_mask(ob, EYES['l'], EYES['r'])
         m = eye_material(EYES['l'], EYES['r']); ob.data.materials[[x.name for x in ob.data.materials].index('eye_tmp')] = m
     ob['joints'] = {k: list(v) for k, v in newJ.items()}
+    if len(EYES) == 2: ob['eyes'] = [list(ob.matrix_world.inverted() @ EYES['l']), list(ob.matrix_world.inverted() @ EYES['r'])]
     return ob
 
 def eye_material(cl, cr, iris=(0.22, 0.14, 0.06), r=0.0118):

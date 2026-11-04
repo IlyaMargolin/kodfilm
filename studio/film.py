@@ -46,8 +46,12 @@ SPEC = cast.spec(HERO, FILM_DIR) or {}
 if SPEC.get('human'):        # живой человек: своё тело (MakeHuman CC0) на скелете мокапа + костюм
     import human, wardrobe
     hs = dict(SPEC['human']); macro = {k: hs[k] for k in ('gender', 'age', 'muscle', 'weight', 'height', 'proportions') if k in hs}
-    body = human.build(hero.arm, skin=human.skin_material(tuple(hs.get('skin', (0.62, 0.43, 0.33))), tuple(hs.get('hair', (0.03, 0.022, 0.016))), hs.get('stubble', 0.6 if hs.get('gender', 1) > 0.5 else 0)), **macro)
+    body = human.build(hero.arm, subdiv=hs.get('subdiv', 2), skin=human.skin_material(tuple(hs.get('skin', (0.62, 0.43, 0.33))), tuple(hs.get('hair', (0.03, 0.022, 0.016))), hs.get('stubble', 0.6 if hs.get('gender', 1) > 0.5 else 0)), **macro)
     if hs.get('wardrobe') == 'robe': wardrobe.robe(body, hero.arm, color=tuple(hs.get('cloth', (0.09, 0.075, 0.06))), hood=hs.get('hood', True))
+    if hs.get('groom', True):   # волосы и борода прядями (Principled Hair)
+        import groom
+        groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.009 if hs.get('gender', 1) > 0.5 else 0),
+                    hooded=hs.get('wardrobe') == 'robe' and hs.get('hood', True))
 # клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
 for _act in ('idle', 'run'):
     if _act in hero.actions and 'walk' in hero.actions:
@@ -150,6 +154,19 @@ for f in range(1, TOTAL + 1):
     fl = M @ hero.arm.pose.bones[footL].head; fr = M @ hero.arm.pose.bones[footR].head
     track_pts.append(dict(head=hd.copy(), root=hero.root.location.copy(), yaw=hero.root.rotation_euler.z, fl=fl.copy(), fr=fr.copy()))
 
+# сглаженная траектория для камеры: оператор ведёт не голову (она качается на каждом шаге), а «центр» движения.
+# Гаусс без задержки — камера как будто знает, куда герой пойдёт (опытный оператор Steadicam/долли так и работает)
+def _gauss(vals, sig):
+    r = max(1, int(sig * 3)); w = [math.exp(-0.5 * (k / sig) ** 2) for k in range(-r, r + 1)]; n = len(vals); out = []
+    for i in range(n):
+        acc = Vector((0, 0, 0)); ws = 0.0
+        for k in range(-r, r + 1):
+            acc += vals[min(n - 1, max(0, i + k))] * w[k + r]; ws += w[k + r]
+        out.append(acc / ws)
+    return out
+for p_, r_, h_ in zip(track_pts, _gauss([p['root'] for p in track_pts], 0.3 * FPS), _gauss([p['head'] for p in track_pts], 0.2 * FPS)):
+    p_['rootS'] = r_; p_['headS'] = h_
+
 # шаги: стопа «прилипла» к полу — скорость упала после движения (ноги не скользят, так что это точный момент удара)
 steps = []
 for key in ('fl', 'fr'):
@@ -213,13 +230,13 @@ def clamp(v):
     return Vector(tuple(min(hi, max(lo, c)) for c, (lo, hi) in zip(v, BOUNDS)))
 
 def subject(f, target):
-    p = track_pts[min(f, TOTAL) - 1]
-    base = p['root']
-    if target == 'head': return p['head'] + Vector((0, 0, 0.04))
-    if target == 'chest': return base.lerp(p['head'], 0.75)
+    p = track_pts[min(max(f, 1), TOTAL) - 1]
+    base, head = p['rootS'], p['headS']      # без «качки» шага: в кадре не дёргается ни прицел, ни фокус
+    if target == 'head': return head + Vector((0, 0, 0.04))
+    if target == 'chest': return base.lerp(head, 0.75)
     if target == 'feet': return (p['fl'] + p['fr']) / 2 + Vector((0, 0, 0.1))
-    if target == 'sky': return p['head'] + Vector((0, 0, 8))
-    return base.lerp(p['head'], 0.5)
+    if target == 'sky': return head + Vector((0, 0, 8))
+    return base.lerp(head, 0.5)
 
 if fogobj: fogobj.hide_viewport = True   # туман не должен мешать проверке «камера в стене»
 cams = []
@@ -249,14 +266,19 @@ for si, sh in enumerate(shots):
         kd_.energy = e; kd_.keyframe_insert('energy', frame=max(1, ff))
     smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
     moving = sh.move in ('track', 'follow', 'lead')
+    # ручная камера — только как приём (крупно, на напряжении, камера стоит). Сопровождение — долли/Steadicam,
+    # общие — штатив/кран: тряска там читается как ошибка оператора, а не как эмоция
+    HAND = 1.0 if (not moving and not sh.poi and sh.size in ('MS', 'MCU', 'CU', 'ECU')) else 0.0
     def raw_pos(f, off=0.0, kd=1.0, de=0.0):
         """Где стоит камера в кадре f без сглаживания: азимут+off, дистанция×kd, высота+de."""
-        u = (f - f0) / max(1, f1 - f0); P = subject(f, sh.target); p = track_pts[min(f, TOTAL) - 1]
+        u = (f - f0) / max(1, f1 - f0); P = subject(f, sh.target); p = track_pts[min(max(f, 1), TOTAL) - 1]
         fw = Vector((math.cos(p['yaw'] + math.pi / 2), math.sin(p['yaw'] + math.pi / 2), 0))
         ref = fw if moving else fwd0
         az = math.radians(sh.azim + off); el = math.radians(sh.elev + de)
         dv = Vector((ref.x * math.cos(az) - ref.y * math.sin(az), ref.x * math.sin(az) + ref.y * math.cos(az), 0))
-        k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u}.get(sh.move, 1.0)
+        # сопровождение (track/follow/lead) с микро-наездом ~5% за план: глаз чувствует «подход» к герою, зритель — нет
+        k = {'slow_push': 1.12 - 0.2 * u, 'push': 1.25 - 0.4 * u, 'dolly': 1.15 - 0.25 * u, 'slow_pull': 0.85 + 0.3 * u,
+             'track': 1.0 - 0.05 * u, 'follow': 1.0 - 0.05 * u, 'lead': 1.0 - 0.05 * u}.get(sh.move, 1.0)
         anchor = P if moving else subject(f0, sh.target)
         q = anchor + (dv * math.cos(el) + Vector((0, 0, math.sin(el)))) * dist * k * kd
         q.z = max(0.15, q.z)
@@ -286,8 +308,10 @@ for si, sh in enumerate(shots):
         _, az_fix, kd_fix, de_fix = best
     else:
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
-    for f in range(f0, f1 + 1):
-        u = (f - f0) / max(1, f1 - f0)
+    # разгон фильтров до склейки: камера входит в план уже в движении, без рывка «с места» в первых кадрах
+    PRE = 0 if (sh.poi or sh.pov) else int(0.6 * FPS)
+    for f in range(max(1, f0 - PRE), f1 + 1):
+        u = max(0.0, (f - f0) / max(1, f1 - f0)); KEY = f >= f0
         P = subject(f, sh.target)
         p = track_pts[min(f, TOTAL) - 1]
         fwd = Vector((math.cos(p['yaw'] + math.pi / 2), math.sin(p['yaw'] + math.pi / 2), 0))
@@ -303,7 +327,7 @@ for si, sh in enumerate(shots):
         else:
             pos, _ = raw_pos(f, az_fix, kd_fix, de_fix)
             aimv = P.copy()
-        hh = Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
+        hh = HAND * Vector((math.sin(f * 0.11) + 0.4 * math.sin(f * 0.23 + 1), math.sin(f * 0.09 + 2) + 0.4 * math.sin(f * 0.19), 0.6 * math.sin(f * 0.13 + 4))) * 0.012 * sh.hand
         # движущаяся камера жёстко привязана к герою (сглаживается только смещение), статичная — плавно панорамирует
         off = pos - (P if moving else Vector((0, 0, 0)))
         smooth_pos = off if smooth_pos is None else smooth_pos.lerp(off, 0.12 if moving else 0.25)
@@ -333,16 +357,19 @@ for si, sh in enumerate(shots):
         else:
             q = dvec.to_track_quat('-Z', 'Y')
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
-        cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
+        if KEY: cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
         # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке
         fpt = P if sh.poi else (subject(f, 'head') if sh.size in ('ECU', 'CU', 'MCU', 'MS') else subject(f, 'chest'))
-        foc.location = aimv if sh.pov else fpt; foc.keyframe_insert('location', frame=f)
+        foc.location = aimv if sh.pov else fpt
+        if KEY: foc.keyframe_insert('location', frame=f)
         # контровой свет плана: как у оператора на площадке, за героем напротив камеры — отделяет от фона
         if not sh.poi and not sh.pov:
             back = (subject(f, 'head') - cam.location); back.z = 0; back = back.normalized() if back.length > 0.01 else Vector((1, 0, 0))
-            rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9)); rim.keyframe_insert('location', frame=f)
+            rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9))
+            if KEY: rim.keyframe_insert('location', frame=f)
             side = back.cross(Vector((0, 0, 1))).normalized() * (1 if (sun.matrix_world.to_quaternion() @ Vector((0, 0, 1))).dot(back.cross(Vector((0, 0, 1)))) > 0 else -1)
-            bounce.location = subject(f, 'head') - back * 1.3 + side * 0.9 + Vector((0, 0, 0.25)); bounce.keyframe_insert('location', frame=f)
+            bounce.location = subject(f, 'head') - back * 1.3 + side * 0.9 + Vector((0, 0, 0.25))
+            if KEY: bounce.keyframe_insert('location', frame=f)
     print('shot', si, sh.size, sh.comp, sh.screen, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))
@@ -352,7 +379,7 @@ if fogobj: fogobj.hide_viewport = False
 os.makedirs(a.out, exist_ok=True)
 json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL, duration=TOTAL / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1)) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 

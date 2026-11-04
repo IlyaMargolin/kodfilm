@@ -5,7 +5,7 @@ cloak(body) — плащ с капюшоном поверх любой одеж�
 import bpy, bmesh, math
 from mathutils import Vector
 
-def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.9, sheen=0.12, scale=380):
+def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.3, scale=380):
     m = bpy.data.materials.new(name); m.use_nodes = True; N = m.node_tree.nodes; L = m.node_tree.links
     b = N['Principled BSDF']; b.inputs['Base Color'].default_value = (*color, 1); b.inputs['Roughness'].default_value = rough
     if 'Sheen Weight' in b.inputs: b.inputs['Sheen Weight'].default_value = sheen; b.inputs['Sheen Roughness'].default_value = 0.4
@@ -72,14 +72,45 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         bv = body.data.vertices[v.index]
         if _w(body, bv, ('Hand', 'Head', 'Neck')) > 0.5 or _w(body, bv, ('Leg', 'Foot', 'Toe')) > 0.5: kill.append(v); continue
         fore = _w(body, bv, ('ForeArm',)); armw = _w(body, bv, ('Arm',))
-        off = 0.022 + sleeve * fore
+        off = 0.036 + sleeve * fore
         v.co += v.normal * off
+    # ткань натягивается поверх рельефа, а не облегает его: сглаживание «только наружу» заполняет впадины
+    # (под грудными мышцами, подмышки, позвоночник), выпуклости остаются опорами — как шерсть, лежащая на теле
+    killset = set(kill); live = [v for v in bm.verts if v not in killset]
+    bm.normal_update(); N0 = {v: v.normal.copy() for v in live}
+    for _ in range(45):
+        upd = []
+        for v in live:
+            nb = [e.other_vert(v) for e in v.link_edges]
+            if not nb: continue
+            avg = sum((o.co for o in nb), Vector()) / len(nb); d = avg - v.co
+            if d.dot(N0[v]) > 0: upd.append((v, d * 0.7))
+        for v, d in upd: v.co += d
     bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(me); bm.free()
     me.materials.clear(); me.materials.append(mat)
     for g in list(top.vertex_groups): pass
+    # грудь рясы ведёт позвоночник, а не плечо: иначе опущенные руки сминают ткань в «грудь» и складку под ней
+    gi = {g.index: g.name for g in top.vertex_groups}
+    for v in me.vertices:
+        ws = {gi[g.group]: g.weight for g in v.groups}
+        sp = sum(w for n, w in ws.items() if 'Spine' in n)
+        if sp < 0.25: continue
+        k = max(0.0, 1.0 - sp * 1.4)          # чем больше вес позвоночника, тем меньше власть плеча
+        for g in v.groups:
+            if any(t in gi[g.group] for t in ('Shoulder', 'Arm')) and 'ForeArm' not in gi[g.group]: g.weight *= k
+        tot = sum(g.weight for g in v.groups)
+        if tot > 1e-6:
+            for g in v.groups: g.weight /= tot
     am = top.modifiers.new('body', 'ARMATURE'); am.object = arm
     top.parent = arm; top.matrix_parent_inverse = arm.matrix_world.inverted()
-    sm = top.modifiers.new('drape', 'SMOOTH'); sm.factor = 0.9; sm.iterations = 12   # ткань не повторяет анатомию
+    # корректирующее сглаживание после скелета (аналог корректирующих шейпов в играх): плечо и подмышка не мнутся
+    # «грудью», когда руки опущены из Т-позы — ткань сохраняет длины рёбер исходной формы
+    cs = top.modifiers.new('corrective', 'CORRECTIVE_SMOOTH'); cs.rest_source = 'ORCO'; cs.smooth_type = 'LENGTH_WEIGHTED'; cs.iterations = 8; cs.factor = 0.6
+    sm = top.modifiers.new('drape', 'SMOOTH'); sm.factor = 1.0; sm.iterations = 60   # ткань не повторяет анатомию (нет «груди» у рясы)
+    # складки под собственным весом: вертикально вытянутый шум (как висит тяжёлая шерсть от плеч к поясу)
+    tx = bpy.data.textures.new('robe_folds', 'CLOUDS'); tx.noise_scale = 0.09; tx.noise_depth = 1
+    em = bpy.data.objects.new('robe_folds_space', None); bpy.context.scene.collection.objects.link(em); em.scale = (1, 1, 5); em.parent = arm; em.matrix_parent_inverse = arm.matrix_world.inverted()
+    dp = top.modifiers.new('folds', 'DISPLACE'); dp.texture = tx; dp.strength = 0.007; dp.mid_level = 0.5; dp.texture_coords = 'OBJECT'; dp.texture_coords_object = em
     sol = top.modifiers.new('thick', 'SOLIDIFY'); sol.thickness = 0.008; sol.offset = 1
     sub = top.modifiers.new('sub', 'SUBSURF'); sub.levels = 1; sub.render_levels = 2
     # 2) юбка: конус от бёдер до щиколоток (складки — шум по окружности)
@@ -92,7 +123,10 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     for v in sk.data.vertices:
         t = v.co.z + 0.5                        # 0 низ, 1 верх
         a = math.atan2(v.co.y, v.co.x)
-        rad = r0 * (1.0 + 0.95 * (1 - t) ** 1.3) * (1 + 0.035 * (1 - t) * math.sin(a * 9) + 0.02 * (1 - t) * math.sin(a * 23 + 1))
+        # глубокие складки тяжёлой шерсти: крупные внизу, у пояса — частые сборки; подол неровный
+        fold = (0.06 * math.sin(a * 7 + 0.4) + 0.03 * math.sin(a * 13 + 2.1) + 0.015 * math.sin(a * 29 + 0.7)) * (1 - t) ** 0.8
+        gather = 0.012 * math.sin(a * 41) * t ** 2
+        rad = r0 * (1.0 + 0.95 * (1 - t) ** 1.3) * (1 + fold + gather)
         v.co.x, v.co.y = math.cos(a) * rad, math.sin(a) * rad * 0.82
         v.co.z *= (top_z - bot_z)
     sk.data.materials.append(mat); bpy.ops.object.shade_smooth()
@@ -113,7 +147,14 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     belt = bpy.context.object; belt.name = 'rope_belt'; belt.scale = (r0 + 0.012, (r0 + 0.012) * 0.82, 1)
     bpy.ops.object.transform_apply(scale=True, location=True)
     rope = bpy.data.materials.new('rope'); rope.use_nodes = True; rb = rope.node_tree.nodes['Principled BSDF']
-    rb.inputs['Base Color'].default_value = (0.32, 0.25, 0.16, 1); rb.inputs['Roughness'].default_value = 0.9
+    rb.inputs['Base Color'].default_value = (0.11, 0.08, 0.05, 1); rb.inputs['Roughness'].default_value = 0.95
+    if 'Sheen Weight' in rb.inputs: rb.inputs['Sheen Weight'].default_value = 0.4
+    # витая пенька: спиральные полосы по объекту (рельеф, а не краска)
+    RN, RL = rope.node_tree.nodes, rope.node_tree.links
+    rw = RN.new('ShaderNodeTexWave'); rw.wave_type = 'BANDS'; rw.bands_direction = 'DIAGONAL'; rw.inputs['Scale'].default_value = 60; rw.inputs['Distortion'].default_value = 1.5
+    rtc = RN.new('ShaderNodeTexCoord'); RL.new(rtc.outputs['Object'], rw.inputs['Vector'])
+    rbp = RN.new('ShaderNodeBump'); rbp.inputs['Strength'].default_value = 0.8; rbp.inputs['Distance'].default_value = 0.004
+    RL.new(rw.outputs['Fac'], rbp.inputs['Height']); RL.new(rbp.outputs['Normal'], rb.inputs['Normal'])
     belt.data.materials.append(rope); bpy.ops.object.shade_smooth()
     _rig_like(belt, body, arm, mix={'mixamorig:Hips': 1.0})
     out = [top, sk, belt]
