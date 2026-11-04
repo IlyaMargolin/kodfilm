@@ -23,6 +23,8 @@ for _n in os.environ.get('HIDE', '').split(','):
 for _o in bpy.data.objects:
     for _m in _o.modifiers:
         if _m.type in os.environ.get('OFFMOD', '').split(','): _m.show_render = False
+if os.environ.get('REST'): hero.arm.data.pose_position = 'REST'
+if os.environ.get('SMOOTHIT'): bpy.data.objects['robe_top'].modifiers['drape'].iterations = int(os.environ['SMOOTHIT'])
 print('OBJS', [(o.name, o.type) for o in bpy.data.objects])
 print('BODYMODS', [(m.type, m.name, getattr(m, 'vertex_group', '')) for m in body.modifiers], len(body.vertex_groups['covered'].name) if 'covered' in body.vertex_groups else None)
 head = hero.arm.matrix_world @ hero.arm.pose.bones[hero.head].head + Vector((0, 0, 0.06))

@@ -86,7 +86,25 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
             avg = sum((o.co for o in nb), Vector()) / len(nb); d = avg - v.co
             if d.dot(N0[v]) > 0: upd.append((v, d * 0.7))
         for v, d in upd: v.co += d
-    bmesh.ops.delete(bm, geom=kill, context='VERTS'); bm.to_mesh(me); bm.free()
+    bmesh.ops.delete(bm, geom=kill, context='VERTS')
+    # швы и обрезки: сшиваем совпадающие вершины, выкидываем мелкие острова (иначе сглаживание их не трогает — «соски» на ткани)
+    bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.002)
+    bm.verts.ensure_lookup_table(); seen = set(); small = []
+    for v in bm.verts:
+        if v in seen: continue
+        isl = [v]; seen.add(v); st = [v]
+        while st:
+            x = st.pop()
+            for e in x.link_edges:
+                o = e.other_vert(x)
+                if o not in seen: seen.add(o); isl.append(o); st.append(o)
+        if len(isl) < 200: small += isl
+    bmesh.ops.delete(bm, geom=small, context='VERTS')
+    # полюса сетки (соски, пупок: вершина с 7+ рёбрами) после сабдива дают «точку-вмятину» — растворяем их в ткани
+    poles = [v for v in bm.verts if len(v.link_edges) >= 7 and not v.is_boundary]
+    if poles: bmesh.ops.dissolve_verts(bm, verts=poles); bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    print('robe top: merged/cleaned, removed', len(small), 'island verts,', len(poles), 'poles')
+    bm.to_mesh(me); bm.free()
     me.materials.clear(); me.materials.append(mat)
     for g in list(top.vertex_groups): pass
     # грудь рясы ведёт позвоночник, а не плечо: иначе опущенные руки сминают ткань в «грудь» и складку под ней
