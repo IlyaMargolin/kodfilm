@@ -154,6 +154,17 @@ def sun(elev_deg, azim_deg, strength=6, color=(1.0, 0.78, 0.55), angle_deg=0.6):
     o.rotation_euler = (math.radians(90 - elev_deg), 0, math.radians(azim_deg))
     return o
 
+class bones_only:
+    """Покадровый разбор позы (опора стоп, трек головы) без пересчёта мешей: волосы, мимика и одежда при каждом
+    frame_set пересчитывались целиком — минуты впустую. Меши прячутся из вьюпорт-графа на время цикла."""
+    def __enter__(self):
+        self.hid = [o for o in bpy.context.scene.objects if o.type == 'MESH' and not o.hide_viewport]
+        for o in self.hid: o.hide_viewport = True
+        return self
+    def __exit__(self, *a):
+        for o in self.hid: o.hide_viewport = False
+        bpy.context.view_layer.update()
+
 def _fcurves(action):
     """Все F-кривые действия (Blender 5: слои -> полосы -> каналы слотов; раньше action.fcurves)."""
     if hasattr(action, 'fcurves'): return list(action.fcurves)
@@ -259,6 +270,10 @@ class Actor:
         return d
 
     def plant_feet(self, f0, f1, ramp=4):
+        with bones_only():
+            return self._plant_feet(f0, f1, ramp)
+
+    def _plant_feet(self, f0, f1, ramp=4):
         """Стопа в опоре стоит на полу намертво (как у аниматоров Rockstar/Naughty Dog: foot locking).
         Опора = стопа низко и почти не движется. На время опоры ставим IK на голень (цепь 2) и фиксируем
         разворот стопы — ступня не скользит и не проворачивается при смене клипов; вне опоры цели совпадают

@@ -36,6 +36,9 @@ RULES = {
                        desc='рамка в рамке: арка, дверь, колонны обрамляют героя, взгляд зрителя «заперт» на нём'),
     'depth':      dict(sx=0.12, sy=0.02, sizes=('FS', 'WS', 'MS'), foreground=True, look_room=True,
                        desc='глубина по оси Z: передний план размыт, герой на среднем, фон читается — объём кадра'),
+    'dirty':      dict(sx=0.2, sy=0.1, sizes=('MS', 'MCU', 'CU'), foreground=True, near=True, look_room=True,
+                       desc='грязный передний план: край колонны/плеча вплотную к объективу, в расфокусе закрывает треть кадра — '
+                            'зритель подглядывает, лицо резкое в глубине (кадры через плечо в студийном кино)'),
     'vanishing':  dict(sx=0.0, sy=0.0, sizes=('WS', 'EWS', 'FS'), snap_axis=True,
                        desc='одноточечная перспектива: ведущие линии архитектуры сходятся на герое'),
 }
@@ -44,7 +47,8 @@ RULES = {
 EMOTION_BIAS = {
     'одиночество': dict(negative=3, scale=2), 'сомнение': dict(negative=2.5, centered=0.5), 'страх': dict(negative=2, triangular=0.5),
     'благоговение': dict(scale=2.5, vanishing=2, centered=1.5), 'решимость': dict(triangular=2.5, vanishing=1.5, thirds=1.2),
-    'тоска': dict(negative=2, circular=1.5, frame_in=1.5), 'тревога': dict(diagonal=2.5, negative=1.5, frame_in=1.3),
+    'тоска': dict(negative=2, circular=1.5, frame_in=1.5, dirty=1.6), 'тревога': dict(diagonal=2.5, negative=1.5, frame_in=1.3, dirty=2.0),
+    'напряжение': dict(dirty=2.2, frame_in=1.5), 'горе': dict(dirty=1.5),
     'движение': dict(diagonal=2.0, dynamic=1.5, depth=1.5), 'сила': dict(triangular=3, centered=1.5), 'откровение': dict(golden=2.5, centered=1.5),
 }
 

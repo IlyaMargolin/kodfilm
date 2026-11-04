@@ -16,11 +16,20 @@ def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.25, scale
         b.inputs['Sheen Weight'].default_value = sheen; b.inputs['Sheen Roughness'].default_value = 0.35
         if 'Sheen Tint' in b.inputs: b.inputs['Sheen Tint'].default_value = (*[min(1.0, c * 4) for c in color], 1)
     tc = N.new('ShaderNodeTexCoord')
+    # координаты ткани: позиция в позе покоя (атрибут 'rest', см. _rest) — узор не «плывёт» по одежде при движении.
+    # Нити не по плоскостям мира: плоские полосы X/Y на выпуклой груди дают концентрические кольца («соски» на ткани).
+    # Основа идёт по окружности вокруг оси тела (развёртка цилиндра: u = угол·радиус), уток — по высоте.
+    at = N.new('ShaderNodeAttribute'); at.attribute_type = 'GEOMETRY'; at.attribute_name = 'rest'
+    P = at.outputs['Vector']; sp_ = N.new('ShaderNodeSeparateXYZ'); L.new(P, sp_.inputs[0])
+    ang = N.new('ShaderNodeMath'); ang.operation = 'ARCTAN2'; L.new(sp_.outputs['X'], ang.inputs[0]); L.new(sp_.outputs['Y'], ang.inputs[1])
+    uu = N.new('ShaderNodeMath'); uu.operation = 'MULTIPLY'; uu.inputs[1].default_value = 0.16; L.new(ang.outputs[0], uu.inputs[0])
+    UV = N.new('ShaderNodeCombineXYZ'); L.new(uu.outputs[0], UV.inputs['X']); L.new(sp_.outputs['Z'], UV.inputs['Y'])
+    UVo = UV.outputs[0]
     def wave(direction, sc_, prof='SIN'):
         w = N.new('ShaderNodeTexWave'); w.wave_type = 'BANDS'; w.bands_direction = direction; w.wave_profile = prof
         w.inputs['Scale'].default_value = sc_ * scale; w.inputs['Distortion'].default_value = 1.3; w.inputs['Detail'].default_value = 1.0
         w.inputs['Detail Scale'].default_value = 3.0
-        L.new(tc.outputs['Object'], w.inputs['Vector']); return w.outputs['Fac']
+        L.new(UVo, w.inputs['Vector']); return w.outputs['Fac']
     def math(op, a, b_=None, v=None):
         n_ = N.new('ShaderNodeMath'); n_.operation = op
         for k, x in enumerate((a, b_)):
@@ -30,14 +39,14 @@ def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.25, scale
         if v is not None: n_.inputs[2].default_value = v
         return n_.outputs[0]
     twill = wave('DIAGONAL', 470)                         # рубчик саржи по диагонали
-    weft = wave('Z', 660)                                 # уток — поперёк (по высоте одежды)
-    warp = math('MAXIMUM', wave('X', 660), wave('Y', 660))  # основа — вдоль
+    weft = wave('Y', 660)                                 # уток — поперёк (по высоте одежды: v = z)
+    warp = wave('X', 660)                                 # основа — вдоль (u — по окружности тела)
     fib = N.new('ShaderNodeTexNoise'); fib.inputs['Scale'].default_value = 5200 * scale; fib.inputs['Detail'].default_value = 2
-    L.new(tc.outputs['Object'], fib.inputs['Vector'])
+    L.new(P, fib.inputs['Vector'])
     # неровная пряжа: шум, вытянутый вдоль нити
-    mp = N.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (420 * scale, 420 * scale, 26 * scale); L.new(tc.outputs['Object'], mp.inputs['Vector'])
+    mp = N.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (420 * scale, 26 * scale, 1.0); L.new(UVo, mp.inputs['Vector'])
     slub = N.new('ShaderNodeTexNoise'); slub.inputs['Scale'].default_value = 1.0; slub.inputs['Detail'].default_value = 3; L.new(mp.outputs[0], slub.inputs['Vector'])
-    big = N.new('ShaderNodeTexNoise'); big.inputs['Scale'].default_value = 7; big.inputs['Detail'].default_value = 6; L.new(tc.outputs['Object'], big.inputs['Vector'])
+    big = N.new('ShaderNodeTexNoise'); big.inputs['Scale'].default_value = 7; big.inputs['Detail'].default_value = 6; L.new(P, big.inputs['Vector'])
     h = math('MULTIPLY_ADD', weft, 0.3); L.new(math('MULTIPLY', twill, 0.5), h.node.inputs[2])
     h = math('ADD', h, math('MULTIPLY', warp, 0.2))
     h = math('ADD', h, math('MULTIPLY', fib.outputs['Fac'], 0.18))
@@ -50,6 +59,13 @@ def fabric(name='wool', color=(0.09, 0.075, 0.06), rough=0.92, sheen=0.25, scale
     tone = math('MULTIPLY_ADD', big.outputs['Fac'], 0.6); L.new(math('MULTIPLY', h, 0.45), tone.node.inputs[2])
     L.new(tone, cr.inputs['Fac']); L.new(cr.outputs['Color'], b.inputs['Base Color'])
     return m
+
+def _rest(ob, center):
+    """Позиция в позе покоя (мир, от оси тела) в атрибут 'rest': координаты для узора ткани."""
+    me = ob.data; a = me.attributes.get('rest') or me.attributes.new('rest', 'FLOAT_VECTOR', 'POINT')
+    mw = ob.matrix_world; cx, cy = center[0], center[1]
+    for i, v in enumerate(me.vertices):
+        w = mw @ v.co; a.data[i].vector = (w.x - cx, w.y - cy, w.z)
 
 def _w(body, v, names):
     """доля веса костей names среди всех костей вершины (нормировано, как в Armature-деформере:
@@ -87,6 +103,65 @@ def _rig_like(o, body, arm, mix=None, drop=('Arm', 'Hand', 'Shoulder')):
     am = o.modifiers.new('body', 'ARMATURE'); am.object = arm
     o.parent = arm; o.matrix_parent_inverse = arm.matrix_world.inverted()
 
+def _smooth_weights(ob, iters=12, k=0.5, keep=()):
+    """Веса ткани размываются по сетке: у кожи тела отдельные вершины (соски, пупок) привязаны к своим костям
+    иначе, чем соседи, и при опущенных руках скелет вытягивает их в «точки» под тканью. Ткань — не кожа,
+    её веса меняются плавно (так делают риггеры одежды в играх: weight smooth после переноса весов).
+    keep — группы, по которым вес не размывается (рукав у запястья держит руку)."""
+    import numpy as np
+    me = ob.data; nv = len(me.vertices); gs = list(ob.vertex_groups)
+    if not gs or nv == 0: return
+    W = np.zeros((nv, len(gs)), np.float32)
+    for v in me.vertices:
+        for g in v.groups: W[v.index, g.group] = g.weight
+    E = np.array([e.vertices[:] for e in me.edges], np.int64)
+    deg = np.bincount(E.ravel(), minlength=nv).astype(np.float32); deg[deg == 0] = 1
+    fix = np.zeros(nv, bool)
+    for j, g in enumerate(gs):
+        if any(t in g.name for t in keep): fix |= W[:, j] > 0.3
+    for _ in range(iters):
+        S = np.zeros_like(W); np.add.at(S, E[:, 0], W[E[:, 1]]); np.add.at(S, E[:, 1], W[E[:, 0]])
+        Wn = W * (1 - k) + (S / deg[:, None]) * k; Wn[fix] = W[fix]; W = Wn
+    W /= np.maximum(W.sum(1, keepdims=True), 1e-6)
+    for j, g in enumerate(gs):
+        idx = np.nonzero(W[:, j] > 1e-3)[0]
+        g.remove(list(range(nv)))
+        for i in idx: g.add([int(i)], float(W[i, j]), 'REPLACE')
+
+def _hang_front(verts, mw, belt_z, col=0.025):
+    """Шерсть висит, а не облегает: от вершины груди до пояса ткань идёт прямой линией (как полотно, натянутое
+    между двумя опорами), поэтому складка под грудной мышцей и «рельеф торса» не читаются — так сидит ряса
+    на референсах. Каждая вершина переда между поясом и грудью выдвигается вперёд до этой прямой (только наружу)."""
+    import numpy as np
+    if not verts: return
+    mwi = mw.inverted(); W = np.array([(mw @ v.co)[:] for v in verts])
+    pec = (np.abs(W[:, 0]) > 0.03) & (np.abs(W[:, 0]) < 0.17) & (W[:, 2] > belt_z + 0.15)
+    if not pec.any(): return
+    zp = W[pec][np.argmax(W[pec][:, 1]), 2]          # высота вершины груди
+    moved = 0
+    for i, v in enumerate(verts):
+        x, y, z = W[i]
+        if not (belt_z < z < zp): continue
+        c = np.abs(W[:, 0] - x) < col
+        top = c & (W[:, 2] >= z) & (W[:, 2] <= zp + 0.03); bot = c & (np.abs(W[:, 2] - belt_z) < 0.03)
+        if not top.any() or not bot.any(): continue
+        y_top = W[top][:, 1].max(); z_top = W[top][np.argmax(W[top][:, 1]), 2]; y_bot = W[bot][:, 1].max()
+        if z_top <= belt_z + 1e-3: continue
+        t = (z - belt_z) / (z_top - belt_z); target = y_bot + (y_top - y_bot) * min(1.0, t)
+        if target > y: v.co = mwi @ Vector((x, target, z)); moved += 1
+    print('robe: ткань висит от груди к поясу, сдвинуто вершин', moved, 'грудь z', round(float(zp), 3), 'пояс z', round(belt_z, 3))
+
+def _taubin(verts, iters, lam=0.6, mu=-0.63):
+    """Сглаживание Таубина: шаг λ сглаживает, шаг μ возвращает объём — рельеф уходит, форма торса не худеет.
+    Соседи вне списка неподвижны (граница зоны)."""
+    for _ in range(iters):
+        for f in (lam, mu):
+            new = {}
+            for v in verts:
+                nb = [e.other_vert(v).co for e in v.link_edges]
+                if nb: new[v] = v.co + (sum(nb, Vector()) / len(nb) - v.co) * f
+            for v, c in new.items(): v.co = c
+
 def robe(body, arm, **kw):
     pp = arm.data.pose_position; arm.data.pose_position = 'REST'; bpy.context.view_layer.update()
     try: return _robe(body, arm, **kw)
@@ -100,6 +175,20 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     top.matrix_world = body.matrix_world
     bm = bmesh.new(); bm.from_mesh(me); bm.verts.ensure_lookup_table(); bm.normal_update()
     kill = []; ps = body.get('proxy_start', 10 ** 9)
+    # рельеф груди (грудные мышцы и соски): сглаживание «только наружу» ниже держит выпуклости как опоры, и шерсть
+    # натягивалась на них шатром с точкой, а равномерное сглаживание драпировки ещё и усиливало бугор (замер: пик
+    # грудной мышцы 20 мм над окрестностью 5 см → 10 после старого сглаживания → 17 после толщины ткани).
+    # Старая зона (вес позвоночника > 0.5) обрывалась ровно на вершине мышцы, и граница держала бугор. Теперь зона —
+    # вся передняя поверхность торса от пояса до ключиц, без рук; сглаживание Таубина (λ/μ) — не сжимает объём.
+    hip = J['mixamorig:Hips']; hipy = hip.y; mw_ = body.matrix_world
+    neck_z = J['mixamorig:Neck'].z if 'mixamorig:Neck' in J else hip.z + 0.55
+    front = []
+    for v in bm.verts:
+        if v.index >= ps or v.is_boundary: continue
+        w = mw_ @ v.co; bv = body.data.vertices[v.index]
+        if w.y > hipy - 0.01 and hip.z + 0.08 < w.z < neck_z - 0.03 and _w(body, bv, ('Arm', 'Hand')) < 0.3: front.append(v)
+    _taubin(front, 40)
+    bm.normal_update(); print('robe: сглажен рельеф груди, вершин', len(front))
     for v in bm.verts:
         bv = body.data.vertices[v.index]
         if _w(body, bv, ('Hand', 'Head', 'Neck')) > 0.5 or _w(body, bv, ('Leg', 'Foot', 'Toe')) > 0.5: kill.append(v); continue
@@ -119,6 +208,9 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
             avg = sum((o.co for o in nb), Vector()) / len(nb); d = avg - v.co
             if d.dot(N0[v]) > 0: upd.append((v, d * 0.7))
         for v, d in upd: v.co += d
+    # после «только наружу» перед торса ещё раз выравнивается: опоры-бугры не должны проступать сквозь шерсть
+    _taubin([v for v in front if v not in killset], 30)
+    _hang_front([v for v in front if v not in killset], mw_, hip.z + 0.12)
     bmesh.ops.delete(bm, geom=kill, context='VERTS')
     # швы и обрезки: сшиваем совпадающие вершины, выкидываем мелкие острова (иначе сглаживание их не трогает — «соски» на ткани)
     bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.002)
@@ -135,10 +227,29 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     bmesh.ops.delete(bm, geom=small, context='VERTS')
     # полюса сетки (соски, пупок: вершина с 7+ рёбрами) после сабдива дают «точку-вмятину» — растворяем их в ткани
     poles = [v for v in bm.verts if len(v.link_edges) >= 7 and not v.is_boundary]
-    if poles: bmesh.ops.dissolve_verts(bm, verts=poles); bmesh.ops.triangulate(bm, faces=[f for f in bm.faces if len(f.verts) > 4])
+    if poles:
+        # шатёр: сглаживание «только наружу» держало соски как опоры. Срезаем рельеф ткани в радиусе 5 см вокруг полюса
+        pc = [v.co.copy() for v in poles]
+        area = [v for v in bm.verts if not v.is_boundary and any((v.co - c).length < 0.05 for c in pc)]
+        for _ in range(30):
+            new = {v: v.co.lerp(sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges), 0.6) for v in area}
+            for v, c in new.items(): v.co = c
+        # растворяем полюс и ставим новую вершину в центр дыры (poke): ровный веер вместо тонких треугольников-щепок,
+        # которые после сглаживания давали звезду-блик на месте соска; затем кольцо выравнивается (лапласиан)
+        bmesh.ops.dissolve_verts(bm, verts=poles)
+        ng = [f for f in bm.faces if len(f.verts) > 4]
+        res = bmesh.ops.poke(bm, faces=ng, center_mode='MEAN_WEIGHTED')
+        ring = set(res['verts'])
+        for v in list(ring): ring.update(e.other_vert(v) for e in v.link_edges)
+        for _ in range(12):
+            for v in ring:
+                if v.is_boundary: continue
+                nb = [e.other_vert(v).co for e in v.link_edges]
+                v.co = v.co.lerp(sum(nb, Vector()) / len(nb), 0.5)
     print('robe top: merged/cleaned, removed', len(small), 'island verts,', len(poles), 'poles')
     bm.to_mesh(me); bm.free()
     me.materials.clear(); me.materials.append(mat)
+    _rest(top, J['mixamorig:Hips'])
     for g in list(top.vertex_groups): pass
     # грудь рясы ведёт позвоночник, а не плечо: иначе опущенные руки сминают ткань в «грудь» и складку под ней
     gi = {g.index: g.name for g in top.vertex_groups}
@@ -152,12 +263,15 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         tot = sum(g.weight for g in v.groups)
         if tot > 1e-6:
             for g in v.groups: g.weight /= tot
+    _smooth_weights(top, iters=12, keep=('ForeArm', 'Hand'))
     am = top.modifiers.new('body', 'ARMATURE'); am.object = arm
     top.parent = arm; top.matrix_parent_inverse = arm.matrix_world.inverted()
     # корректирующее сглаживание после скелета (аналог корректирующих шейпов в играх): плечо и подмышка не мнутся
     # «грудью», когда руки опущены из Т-позы — ткань сохраняет длины рёбер исходной формы
     cs = top.modifiers.new('corrective', 'CORRECTIVE_SMOOTH'); cs.rest_source = 'ORCO'; cs.smooth_type = 'LENGTH_WEIGHTED'; cs.iterations = 8; cs.factor = 0.6
-    sm = top.modifiers.new('drape', 'SMOOTH'); sm.factor = 1.0; sm.iterations = 60   # ткань не повторяет анатомию (нет «груди» у рясы)
+    # лёгкая драпировка: рельеф уже снят Таубином в сетке. 60 равномерных итераций (как было) стягивали вершины к
+    # сгущениям сетки у подмышек и рождали острый бугор на груди в позе с опущенными руками (замер: +12 мм)
+    sm = top.modifiers.new('drape', 'SMOOTH'); sm.factor = 1.0; sm.iterations = 12
     # складки под собственным весом: вертикально вытянутый шум (как висит тяжёлая шерсть от плеч к поясу)
     tx = bpy.data.textures.new('robe_folds', 'CLOUDS'); tx.noise_scale = 0.09; tx.noise_depth = 1
     em = bpy.data.objects.new('robe_folds_space', None); bpy.context.scene.collection.objects.link(em); em.scale = (1, 1, 5); em.parent = arm; em.matrix_parent_inverse = arm.matrix_world.inverted()
@@ -182,6 +296,7 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         v.co.z *= (top_z - bot_z)
     sk.data.materials.append(mat); bpy.ops.object.shade_smooth()
     bpy.ops.object.transform_apply(location=True, scale=True)
+    _rest(sk, J['mixamorig:Hips'])
     hz = hip.z
     _rig_like(sk, body, arm, mix={'mixamorig:Hips': lambda co: max(0.0, min(1.0, (co.z - bot_z) / max(0.01, hz - bot_z))) * 0.35 + 0.55})
     sol2 = sk.modifiers.new('thick', 'SOLIDIFY'); sol2.thickness = 0.008
@@ -233,6 +348,7 @@ def hood_obj(body, arm, mat, J=None):
     h.scale = (0.135, 0.15, 0.15); bpy.ops.object.transform_apply(scale=True, location=False)
     h.data.materials.append(mat); bpy.ops.object.shade_smooth()
     loc = h.location.copy(); bpy.ops.object.transform_apply(location=True)
+    _rest(h, J['mixamorig:Hips'])
     _rig_like(h, body, arm, drop=('Hand', 'ForeArm'), mix={'mixamorig:Head': lambda co: max(0.0, min(1.0, (co.z - neck.z + 0.05) / 0.15)) * 0.9})
     s = h.modifiers.new('thick', 'SOLIDIFY'); s.thickness = 0.012; s.offset = 1
     h.modifiers.new('sub', 'SUBSURF').render_levels = 2

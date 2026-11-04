@@ -8,7 +8,7 @@ import world, cast, human, wardrobe, groom
 args = sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else []
 name = args[0] if args else 'pilgrim'; out = args[1] if len(args) > 1 else 'out/portrait'; S = int(args[2]) if len(args) > 2 else 32
 hood_override = args[3] if len(args) > 3 else None
-sc = world.new_scene(900, 900, 24, engine='CYCLES', TAA=S); sc.view_settings.exposure = 0.6
+sc = world.new_scene(900, 900, 24, engine=os.environ.get('ENGINE', 'CYCLES'), TAA=S); sc.view_settings.exposure = 0.6
 world.hdri('venice_sunset_1k.hdr', 0.6)
 world.sun(25, 120, 4)
 hero = world.Actor(cast.resolve(name)); hs = dict(cast.spec(name)['human'])
@@ -27,6 +27,11 @@ if os.environ.get('SMOOTHIT'): bpy.data.objects['robe_top'].modifiers['drape'].i
 print('OBJS', [(o.name, o.type) for o in bpy.data.objects])
 print('BODYMODS', [(m.type, m.name, getattr(m, 'vertex_group', '')) for m in body.modifiers], len(body.vertex_groups['covered'].name) if 'covered' in body.vertex_groups else None)
 EY = human.eyes_world(body, hero.arm); bpy.context.view_layer.update(); EY = human.eyes_world(body, hero.arm)
+if os.environ.get('EXPR') and body.data.shape_keys:    # проверка мимики: EXPR=горе (эмоция из studio/face.py)
+    import face
+    for k_, v_ in face._expand(face.EXPR[os.environ['EXPR']], 0.12).items():
+        if k_ in body.data.shape_keys.key_blocks: body.data.shape_keys.key_blocks[k_].value = min(1.0, v_)
+    print('EXPR', os.environ['EXPR'], [(k.name, round(k.value, 2)) for k in body.data.shape_keys.key_blocks if k.value > 0])
 eyes_c = (EY[0] + EY[1]) / 2
 head = eyes_c
 # студийный свет как на референсах: большой мягкий ключ сбоку-сверху, заполняющий щит, контровой — объём без «пластика»
@@ -40,6 +45,7 @@ if os.environ.get('STUDIO', '1') == '1':
 os.makedirs(out, exist_ok=True)
 if os.environ.get('DENOISE') == 'off': sc.cycles.use_denoising = False
 elif os.environ.get('DENOISE') == 'albedo': sc.cycles.denoising_input_passes = 'RGB_ALBEDO'
+if os.environ.get('DBG'): exec(open(os.environ['DBG']).read())
 W = int(os.environ.get('RES', '1200')); sc.render.resolution_x = sc.render.resolution_y = W
 CAMS = [int(c) for c in os.environ.get('CAMS', '0,1,2').split(',')]
 for i, (az, el, d, lens) in enumerate(((20, 0, 0.75, 85), (70, 5, 0.75, 85), (0, -5, 3.2, 50))):

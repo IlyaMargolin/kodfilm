@@ -161,7 +161,14 @@ def _system(ob, name, group, mat_index, count, length, children, width, align, c
     st.material = mat_index + 1
     st.root_radius = 1.0; st.tip_radius = 0.1; st.radius_scale = width; st.use_close_tip = True; st.shape = -0.2
     st.display_percentage = 20
+    if bpy.context.scene.render.engine != 'CYCLES': eevee_hair(st)
     return ps
+
+def eevee_hair(st):
+    # EEVEE рисует пряди тем же путём, что и вьюпорт: берёт display_percentage родителей, child_percent детей и display_step.
+    # С настройками вьюпорта (20% родителей, 2 ребёнка, 3 шага) в кадре остаются клочья: лысина, рваные брови и борода.
+    # прядь в EEVEE не тоньше пикселя: при полном числе детей шевелюра становится войлоком — берём треть
+    st.display_percentage = 100; st.child_percent = max(2, st.rendered_child_count // 3); st.display_step = st.render_step
 
 def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0, hooded=False, recede=0.008):
     """Волосы + борода. Длины по анатомии роста: волосы ~1 см/мес, борода путника за 3–4 мес — 3–4 см.

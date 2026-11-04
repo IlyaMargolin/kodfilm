@@ -51,6 +51,7 @@ class Scene:
     director: str = 'villeneuve'
     dp: str = None
     composer: str = None
+    palette: str = ''   # ведущая палитра сцены (studio/palette.py), пусто — по небу
     style: str = ''     # «restyle/neon»: стиль из style.json стилевого репозитория (studio/styles.py)
     beats: list = field(default_factory=list)
 
@@ -74,6 +75,7 @@ def parse(text):
             elif k == 'ОПЕРАТОР': sc.dp = v.lower()
             elif k == 'КОМПОЗИТОР': sc.composer = v.lower()
             elif k == 'СТИЛЬ': sc.style = v.lower()
+            elif k == 'ПАЛИТРА': sc.palette = v.lower()
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)
         if not m: continue

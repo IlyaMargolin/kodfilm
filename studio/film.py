@@ -42,12 +42,16 @@ if a.lens.endswith('.json'):
     a.lens = LOOK.get('lens', 'cinema'); a.passes = a.passes or LOOK.get('passes', False)
 if a.lens != 'none':
     import lens; lens.setup(sc, a.lens)
+import palette
+if a.lens != 'none': palette.setup(sc)      # грейд по палитре кадра (после линзы)
 if a.passes:
     import lens; lens.passes(sc, a.out)
 if scn.world == 'sponza': world.set_sponza()
 world.hdri(scn.sky[0], scn.sky[1])
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
-fogobj = world.fog(scn.fog * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
+from crew import profile as _cp
+HAZE = 0.6 + 0.5 * _cp(scn.director, getattr(scn, 'dp', None))['light'].get('haze', 0.8)   # дымка — инструмент оператора: контровой становится лучами
+fogobj = world.fog(scn.fog * HAZE * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
 
 # ---------- постановка героя ----------
 import cast
@@ -65,11 +69,12 @@ if SPEC.get('human'):        # живой человек: своё тело (Mak
         groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.03 if hs.get('gender', 1) > 0.5 else 0),
                     hooded=hs.get('wardrobe') == 'robe' and hs.get('hood', True))
 # клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
-for _act in ('idle', 'run'):
-    if _act in hero.actions and 'walk' in hero.actions:
-        print('align', _act, round(math.degrees(hero.align_facing(_act, 'walk')), 1), 'deg', flush=True)
+with world.bones_only():   # позовые циклы без пересчёта сеток и волос
+    for _act in ('idle', 'run'):
+        if _act in hero.actions and 'walk' in hero.actions:
+            print('align', _act, round(math.degrees(hero.align_facing(_act, 'walk')), 1), 'deg', flush=True)
+    speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
-speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 pos = Vector((0, 0, 0)); yaw = 0.0
 t = 0.0
 for i, bt in enumerate(scn.beats):
@@ -148,6 +153,9 @@ for f in range(1, TOTAL + 1, 2):
         b.rotation_quaternion = Quaternion((1, 0, 0), pv * (0.6 if j == 0 else 0.4)); b.keyframe_insert('rotation_quaternion', frame=f)
 ad.action = None
 ls = look_tr.strips.new('look', 1, look); ls.blend_type = 'COMBINE'; ls.extrapolation = 'HOLD'
+# мимика: выражение бита, асимметрия, микродвижения, моргания (studio/face.py)
+if body is not None:
+    import face; print('мимика: морганий', face.act(body, scn.beats, FPS, TOTAL), flush=True)
 
 # опора стоп: ступня в контакте с полом прибита (IK), не скользит и не проворачивается
 if not os.environ.get('KF_NOPLANT'): print('plant', hero.plant_feet(1, TOTAL), flush=True)
@@ -159,6 +167,7 @@ print(director.describe(shots), flush=True)
 # покадровые данные героя: голова, грудь, стопы (для камер и для звука шагов)
 track_pts = []
 footL = hero.foot; footR = hero.foot.replace('Left', 'Right')
+_bo = world.bones_only().__enter__()
 for f in range(1, TOTAL + 1):
     sc.frame_set(f)
     M = hero.arm.matrix_world
@@ -169,6 +178,7 @@ for f in range(1, TOTAL + 1):
     track_pts.append(dict(head=hd.copy(), root=hero.root.location.copy(), yaw=hero.root.rotation_euler.z, fl=fl.copy(), fr=fr.copy(),
                           el=ey[0].copy(), er=ey[1].copy()))
 
+_bo.__exit__()
 # сглаженная траектория для камеры: оператор ведёт не голову (она качается на каждом шаге), а «центр» движения.
 # Гаусс без задержки — камера как будто знает, куда герой пойдёт (опытный оператор Steadicam/долли так и работает)
 def _gauss(vals, sig):
@@ -241,6 +251,26 @@ def occlusion(pos, P, lens, scr=(0.0, 0.0)):
             if sc.ray_cast(dg, pos, d, distance=0.6 * L)[0]: near += 1
     return near / n
 
+def framing(pos, P, lens, scr=(0.0, 0.0)):
+    """Передний план кадра: (закрыт ли герой, доля левого края, доля правого края) — лучи 9×5, «край» = препятствие
+    ближе 0.45 расстояния до героя вне его зоны (в расфокусе), «герой» = что угодно ближе 0.9 в его зоне."""
+    global dg
+    dg = dg or bpy.context.evaluated_depsgraph_get()
+    fw = (P - pos).normalized(); rt = fw.cross(Vector((0, 0, 1))).normalized(); up = rt.cross(fw)
+    tw = SENSOR_W / 2 / lens; th = tw * a.h / a.w; L = (P - pos).length
+    hx, hy = 2 * scr[0], 2 * scr[1]; hero = hn = 0; lft = rgt = nl = nr = 0
+    for i in (-0.95, -0.72, -0.48, -0.24, 0, 0.24, 0.48, 0.72, 0.95):
+        for j in (-0.9, -0.45, 0, 0.45, 0.9):
+            d = (fw + rt * ((i - hx) * tw) + up * ((j - hy) * th)).normalized()
+            r = sc.ray_cast(dg, pos, d, distance=0.9 * L)
+            if abs(i) < 0.3 and abs(j) < 0.7:
+                hn += 1; hero += 1 if r[0] else 0
+            else:
+                near = r[0] and (r[1] - pos).length < 0.45 * L
+                if i + hx < 0: nl += 1; lft += 1 if near else 0
+                else: nr += 1; rgt += 1 if near else 0
+    return hero / max(1, hn), lft / max(1, nl), rgt / max(1, nr)
+
 ALLOW_OCC = {'EWS': 0.3, 'WS': 0.22, 'FS': 0.15}     # на общих арки по краям — рамка кадра; на крупных — брак
 
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
@@ -257,6 +287,12 @@ def subject(f, target):
     if target == 'sky': return head + Vector((0, 0, 8))
     return base.lerp(head, 0.5)
 
+import gaffer
+from crew import profile as _crew_profile
+LIGHT = _crew_profile(scn.director, getattr(scn, 'dp', None))['light']
+SUN_DIR = sun.matrix_world.to_quaternion() @ Vector((0, 0, 1))
+# свет плана ложится только на актёра: тело, одежда, волосы (всё, что ведёт скелет героя)
+RECEIVERS = [o for o in sc.objects if o.type == 'MESH' and (o.parent == hero.arm or any(m.type == 'ARMATURE' and m.object == hero.arm for m in o.modifiers))]
 if fogobj: fogobj.hide_viewport = True   # туман не должен мешать проверке «камера в стене»
 cams = []
 for si, sh in enumerate(shots):
@@ -269,20 +305,12 @@ for si, sh in enumerate(shots):
     dist = director.FRAME_H[sh.size] * sh.lens / SENSOR_H
     p0 = track_pts[f0 - 1]; yaw0 = p0['yaw']
     fwd0 = Vector((math.cos(yaw0 + math.pi / 2), math.sin(yaw0 + math.pi / 2), 0))
-    rd = bpy.data.lights.new(f'rim{si:02d}', 'SPOT'); rd.spot_size = math.radians(28); rd.spot_blend = 0.6; rd.shadow_soft_size = 0.4; rd.color = (1.0, 0.86, 0.7)
-    rim = bpy.data.objects.new(f'rim{si:02d}', rd); sc.collection.objects.link(rim)
-    rt = rim.constraints.new('TRACK_TO'); rt.target = foc; rt.track_axis = 'TRACK_NEGATIVE_Z'; rt.up_axis = 'UP_Y'
-    RIM = 0 if (sh.poi or sh.pov or sh.size not in ('MS', 'MCU', 'CU', 'ECU')) else 90   # контровой только там, где его мотивирует солнце за героем и не видно пятна
-    for ff, e in ((f0 - 1, 0), (f0, RIM), (f1, RIM), (f1 + 1, 0)):
-        rd.energy = e; rd.keyframe_insert('energy', frame=max(1, ff))
-    # мягкий ключ-отражатель для портретов: как белый щит на площадке, отражённый свет с солнечной стороны.
-    # Лицо в тени капюшона/арки читается, но остаётся тёплым и мотивированным (не прожектор).
-    kd_ = bpy.data.lights.new(f'bounce{si:02d}', 'AREA'); kd_.size = 1.2; kd_.color = (1.0, 0.88, 0.74)
-    bounce = bpy.data.objects.new(f'bounce{si:02d}', kd_); sc.collection.objects.link(bounce)
-    bt_ = bounce.constraints.new('TRACK_TO'); bt_.target = foc; bt_.track_axis = 'TRACK_NEGATIVE_Z'; bt_.up_axis = 'UP_Y'
-    BOUNCE = 0 if (sh.poi or sh.pov or sh.size not in ('MS', 'MCU', 'CU', 'ECU')) else {'MS': 25, 'MCU': 14, 'CU': 10, 'ECU': 6}[sh.size]
-    for ff, e in ((f0 - 1, 0), (f0, BOUNCE), (f1, BOUNCE), (f1 + 1, 0)):
-        kd_.energy = e; kd_.keyframe_insert('energy', frame=max(1, ff))
+    # свет плана (гаффер): ключ с дальней стороны лица, заливка по контрасту оператора, перекрёстный контровой
+    _bt = next((b for b in scn.beats if b.start <= sh.start + 0.05 < b.start + b.dur), scn.beats[-1])
+    sh.palette = palette.for_shot(scn, _bt.emotion)
+    from crew import emotions as _emo; sh.detail = _emo.slowmo_detail(getattr(sh, 'speed', 1.0), _bt.action)
+    gl = gaffer.ShotLights(sc, f'{si:02d}', LIGHT, RECEIVERS, sh.palette)
+    gl.window('' if (sh.poi or sh.pov) else sh.size, f0, f1)
     smooth_pos = None; smooth_aim = None; gaze = None; ox = oy = 0.0; sh.screen = None
     moving = sh.move in ('track', 'follow', 'lead')
     # ручная камера — только как приём (крупно, на напряжении, камера стоит). Сопровождение — долли/Steadicam,
@@ -324,10 +352,12 @@ for si, sh in enumerate(shots):
     plan_ok = None
     if not sh.pov and not sh.poi:
         best = (-1, 0, 1.0, 0.0)
+        _r = composition.RULES.get(sh.comp or '', {})
+        FG = 'frame' if _r.get('frame') else 'fg' if _r.get('foreground') else None
         tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7, 0.55) for de in (0, 8, -6, 18) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
         for o, kd, de in tries:
             fs = list(range(f0, f1 + 1, 3)) + [f1]
-            allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0
+            allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0; bon = 0.0
             for fm in fs:
                 q, Pq = raw_pos(fm, o, kd, de)
                 if not path_ok(q, Pq, 0.3 if sh.move == 'passby' else 0.5): continue
@@ -336,12 +366,17 @@ for si, sh in enumerate(shots):
                     pp_ = track_pts[min(fm, TOTAL) - 1]; fw_ = Vector((math.cos(pp_['yaw'] + math.pi / 2), math.sin(pp_['yaw'] + math.pi / 2), 0))
                     dv_ = Pq - q; yd = math.atan2(dv_.y, dv_.x); g_ = 1 if (fw_.x * math.sin(yd) - fw_.y * math.cos(yd)) >= -0.15 else -1
                     sx_, sy_ = composition.screen_point(sh.comp, g_, a.w / a.h); scr = (sx_, sy_ / (composition.VISIBLE * a.w / a.h))
-                oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
-            ok = good - pen
+                if FG:   # передний план — приём: края закрыты вплотную к объективу, герой чист
+                    hc, el_, er_ = framing(q, Pq, sh.lens, scr); good += 1; pen += hc * 6
+                    edge = min(el_, er_) * 2 if FG == 'frame' else max(el_, er_)
+                    bon += min(edge, 0.35) - max(0.0, max(el_, er_) - 0.55)
+                else:
+                    oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
+            ok = good - pen + 1.5 * bon
             sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
             if os.environ.get('CAMDBG') == str(si): print('try', o, kd, de, 'good', good, '/', len(fs), 'pen', round(pen, 2), 'score', round(sc_, 3))
             if sc_ > best[0]: best = (sc_, o, kd, de)
-            if good == len(fs) and pen == 0: break
+            if good == len(fs) and pen == 0 and (not FG or bon / len(fs) > 0.15): break
         _, az_fix, kd_fix, de_fix = best
     else:
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
@@ -413,14 +448,18 @@ for si, sh in enumerate(shots):
         else: fpt = subject(f, 'chest')
         foc.location = aimv if sh.pov else fpt
         if KEY: foc.keyframe_insert('location', frame=f)
-        # контровой свет плана: как у оператора на площадке, за героем напротив камеры — отделяет от фона
-        if not sh.poi and not sh.pov:
-            back = (subject(f, 'head') - cam.location); back.z = 0; back = back.normalized() if back.length > 0.01 else Vector((1, 0, 0))
-            rim.location = subject(f, 'head') + back * 2.2 + Vector((0, 0, 0.9))
-            if KEY: rim.keyframe_insert('location', frame=f)
-            side = back.cross(Vector((0, 0, 1))).normalized() * (1 if (sun.matrix_world.to_quaternion() @ Vector((0, 0, 1))).dot(back.cross(Vector((0, 0, 1)))) > 0 else -1)
-            bounce.location = subject(f, 'head') - back * 1.3 + side * 0.9 + Vector((0, 0, 0.25))
-            if KEY: bounce.keyframe_insert('location', frame=f)
+        if f == (f0 + f1) // 2: mid_cf = (cam.location.copy(), foc.location.copy())
+        if not sh.poi and not sh.pov and KEY:
+            gl.place(f, subject(f, 'head'), cam.location, fwd, SUN_DIR)
+    # диафрагма по фону (как у оператора с рулеткой): фон размыт на заданную долю кадра, лицо целиком в резкости
+    if not sh.pov and sh.size in gaffer.BOKEH:
+        cpos, fpos = mid_cf; dvn = (fpos - cpos); sdist = dvn.length; dvn.normalize()
+        dg = dg or bpy.context.evaluated_depsgraph_get()
+        hit = sc.ray_cast(dg, fpos + dvn * 0.6, dvn, distance=200)
+        bg = (sdist + 0.6 + (hit[1] - (fpos + dvn * 0.6)).length) if hit[0] else 60.0
+        nf = gaffer.fstop_for(sh.size, sh.lens, SENSOR_W, sdist, bg, sh.fstop)
+        if nf != sh.fstop: print(f'  диафрагма {sh.fstop:.1f} → {nf:.1f} (фокус {sdist:.2f} м, фон {bg:.1f} м)', flush=True)
+        sh.fstop = nf; cd.dof.aperture_fstop = nf
     print('shot', si, sh.size, sh.comp, sh.screen, sh.note, 'az_fix', az_fix, 'cam', tuple(round(c, 1) for c in cam.location), 'hero', tuple(round(c, 1) for c in track_pts[f1 - 1]['root']), flush=True)
     m = sc.timeline_markers.new(f'shot{si:02d}', frame=f0); m.camera = cam
     cams.append((f0, f1, cam))
@@ -462,7 +501,7 @@ for sh in shots: sh.start, sh.end = src2out(sh.start), src2out(sh.end)
 os.makedirs(a.out, exist_ok=True)
 json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL_OUT, duration=TOTAL_OUT / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0)) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
@@ -493,10 +532,12 @@ for f in frames:
     size_ = 'CU' if shots[ci].poi else shots[ci].size
     for st_, (n_, w_) in psets.items():   # меньше прядей — каждая толще: покрытие и цвет шевелюры не меняются
         k_ = HAIR_K.get(size_, 1.0); st_.rendered_child_count = max(2, int(round(n_ * k_))); st_.radius_scale = w_ * min(3.0, 1.0 / k_)
+        if a.engine != 'cycles': groom.eevee_hair(st_)
     for m_, lv in subs: m_.render_levels = min(lv, SUBD.get(size_, lv))
     if base_s:
         ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
         sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th
+    palette.apply(sc, shots[ci].palette)
     sc.camera = cam; sc.frame_set(fi, subframe=fr)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)

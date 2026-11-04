@@ -172,7 +172,10 @@ def eyes_world(body, arm, head='mixamorig:Head'):
     резкость кино ставят на ближний глаз, а не на центр черепа (на 85 мм f/2.8 разница 9 см = «мыло» лица)."""
     if 'eyes' not in body or head not in arm.pose.bones: return None
     pb = arm.pose.bones[head]; M = arm.matrix_world @ pb.matrix @ pb.bone.matrix_local.inverted() @ arm.matrix_world.inverted()
-    return [M @ (body.matrix_world @ Vector(e)) for e in body['eyes']]
+    # мир тела считаем от родителя: при разборе поз меши спрятаны (world.bones_only) и их matrix_world не обновляется,
+    # а фокус уезжал туда, где герой стоял в начале (замер: 13 м вместо 2 на крупных планах)
+    bw = (body.parent.matrix_world @ body.matrix_parent_inverse @ body.matrix_basis) if body.parent else body.matrix_world
+    return [M @ (bw @ Vector(e)) for e in body['eyes']]
 
 def build_actor(arm, hs, name='human'):
     """Карточка актёра (блок "human") → готовое тело: анатомия, фото-кожа, брови, ресницы, глаза."""
@@ -289,6 +292,38 @@ def face_mask(ob, eye_l, eye_r):
             stub *= (1 - mouth)
         ca.data[v.index].color = (brow, stub, 0, 1)
 
+# единицы мимики MakeHuman (CC0, data/targets/expression/units): из них лицо собирает эмоции
+FACE_UNITS = ['eye-left-closure', 'eye-right-closure', 'eye-left-opened-up', 'eye-right-opened-up', 'eye-left-slit', 'eye-right-slit',
+              'eyebrows-left-down', 'eyebrows-right-down', 'eyebrows-left-inner-up', 'eyebrows-right-inner-up',
+              'eyebrows-left-up', 'eyebrows-right-up', 'mouth-open', 'mouth-corner-puller', 'mouth-depression',
+              'mouth-compression', 'mouth-parling', 'nose-left-elevation', 'nose-right-elevation']
+
+def _face_units(ob, remap, PXW, PXK, race='caucasian'):
+    """Сдвиги вершин каждой единицы мимики уже в пространстве готового меша: сдвигаем базу, прогоняем через Т-позу,
+    вычитаем. Брови и ресницы (прокси) едут за своими опорными вершинами, глазные яблоки — нет."""
+    me = ob.data; nv = len(me.vertices)
+    base = np.empty(nv * 3); me.vertices.foreach_get('co', base); base = base.reshape(-1, 3)
+    skip = [(a, b) for a, b, k in PXK if k == 'eyes']
+    def evaluated():
+        dg = bpy.context.evaluated_depsgraph_get(); ev = ob.evaluated_get(dg); m = ev.to_mesh()
+        c = np.empty(len(m.vertices) * 3); m.vertices.foreach_get('co', c); ev.to_mesh_clear(); return c.reshape(-1, 3)
+    E0 = evaluated(); out = {}
+    for u in FACE_UNITS:
+        t = _target(os.path.join(MH, 'targets', 'expression', 'units', race, u + '.target.gz'))
+        if not t: continue
+        D = np.zeros((nv, 3))
+        for i, dv in t.items():     # таргет в осях obj (Y вверх, дециметры) → оси Blender, метры, как в shape()
+            if i in remap: D[remap[i]] = (-dv[0] * 0.1, dv[2] * 0.1, dv[1] * 0.1)
+        for n, lst in PXW.items():
+            if any(a <= n < b for a, b in skip): continue
+            D[n] = sum((np.array((-t[vi][0], t[vi][2], t[vi][1])) * 0.1 * w for vi, w in lst if vi in t), np.zeros(3))
+        me.vertices.foreach_set('co', (base + D).ravel()); me.update()
+        d = evaluated() - E0; idx = np.where(np.abs(d).max(1) > 1e-6)[0]
+        if len(idx): out[u] = (idx, d[idx])
+    me.vertices.foreach_set('co', base.ravel()); me.update()
+    print('мимика:', len(out), 'единиц', flush=True)
+    return out
+
 def build(arm, name='human', skin=None, subdiv=1, proxies=(), hair_color=(0.03, 0.022, 0.016), **macro):
     """Строит тело и пересаживает скелет arm (Mixamo) в его суставы. Меши, которые были у arm, удаляются."""
     pp = arm.data.pose_position; arm.data.pose_position = 'REST'   # строим всё в позе покоя, иначе текущая анимация исказит привязку
@@ -309,7 +344,7 @@ def _build(arm, name, skin, subdiv, proxies, hair_color, **macro):
     ob = bpy.data.objects.new(name, me); bpy.context.scene.collection.objects.link(ob)
     ob.data.materials.append(skin or skin_material())
     # прокси (брови, ресницы, глаза) вливаем в меш тела: они едут через ту же Т-позу и скелет, веса — от опорных вершин
-    PXW = {}; PXR = []; px_eyes = False; ob['proxy_start'] = len(me.vertices)     # всё, что дальше, — не кожа (одежда это не копирует)
+    PXW = {}; PXR = []; PXK = []; px_eyes = False; ob['proxy_start'] = len(me.vertices)     # всё, что дальше, — не кожа (одежда это не копирует)
     for kind, pname in proxies:
         px = _proxy(kind, pname)
         if not px: print('нет прокси', kind, pname); continue
@@ -326,6 +361,7 @@ def _build(arm, name, skin, subdiv, proxies, hair_color, **macro):
         bm.to_mesh(me); bm.free(); PXR.append((n0, n0 + len(P), mi))
         for k, (vi, w, off) in enumerate(px['refs']): PXW[n0 + k] = list(zip(vi, w))
         if kind == 'eyes': px_eyes = True
+        PXK.append((n0, n0 + len(P), kind))
 
     # --- суставы нового тела (мир) и Т-поза под скелет arm ---
     J = {n: (_joint(B, s['head']), _joint(B, s['tail'])) for n, s in rig.items()}
@@ -381,6 +417,7 @@ def _build(arm, name, skin, subdiv, proxies, hair_color, **macro):
         T1 = Matrix.Translation(M.translation); M2 = T1 @ R @ Matrix.Translation(-M.translation) @ M
         pb.matrix = M2
     bpy.context.view_layer.update(); bpy.ops.object.mode_set(mode='OBJECT')
+    FACE = _face_units(ob, remap, PXW, PXK) if not os.environ.get('NO_FACE') else {}
     # запекаем Т-позу в меш и снимаем суставы
     dg = bpy.context.evaluated_depsgraph_get(); ev = ob.evaluated_get(dg); nm = bpy.data.meshes.new_from_object(ev)
     ob.modifiers.remove(md); old = ob.data; ob.data = nm; nm.materials.clear()
@@ -451,6 +488,12 @@ def _build(arm, name, skin, subdiv, proxies, hair_color, **macro):
         if 'eye_tmp' in [x.name for x in ob.data.materials]:
             m = eye_material(EYES['l'], EYES['r']); ob.data.materials[[x.name for x in ob.data.materials].index('eye_tmp')] = m
     ob['joints'] = {k: list(v) for k, v in newJ.items()}
+    if FACE:   # мимика: шейпы лица (FACS-подобные единицы MakeHuman), значения ставит studio/face.py
+        ob.shape_key_add(name='Basis', from_mix=False); nv = len(ob.data.vertices)
+        co0 = np.empty(nv * 3); ob.data.vertices.foreach_get('co', co0); co0 = co0.reshape(-1, 3)
+        for nm_, (idx, d) in FACE.items():
+            kb = ob.shape_key_add(name=nm_, from_mix=False); c = co0.copy(); c[idx] += d
+            kb.data.foreach_set('co', c.ravel()); kb.value = 0.0
     if len(EYES) == 2: ob['eyes'] = [list(ob.matrix_world.inverted() @ EYES['l']), list(ob.matrix_world.inverted() @ EYES['r'])]
     return ob
 
