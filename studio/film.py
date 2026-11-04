@@ -33,6 +33,10 @@ sc.view_settings.exposure = a.ev if a.ev is not None else (0.9 if a.engine == 'c
 #   {"lens": "cinema", "passes": true, "post": "../kodfilm-restyle/post.py"} — post вызывается после рендера
 #   с аргументами <папка кадров> <meta.json> (стадия post из style.json: нужны beauty, depth, motion)
 LOOK = {}
+if scn.style and a.lens == 'cinema':   # СТИЛЬ: из сценария — look стадии post, если стилевой репозиторий рядом
+    import styles; lf = styles.look_file(scn.style)
+    if lf: a.lens = lf
+    else: print(f'стиль {scn.style}: look-файла для ядра нет (стиль рисует в своём движке или репозиторий не скачан)', flush=True)
 if a.lens.endswith('.json'):
     LOOK = json.load(open(a.lens, encoding='utf-8')); LOOK['_dir'] = os.path.dirname(os.path.abspath(a.lens))
     a.lens = LOOK.get('lens', 'cinema'); a.passes = a.passes or LOOK.get('passes', False)

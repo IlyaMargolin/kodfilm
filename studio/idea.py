@@ -8,6 +8,8 @@
 # Разбор правилами (без внешних сервисов): глаголы → действия, слова чувств → эмоции, жанровые слова → режиссёр.
 # Это нижний уровень: Claude в чате пишет идею развёрнуто и подаёт сюда уже ясные фразы — по одной на бит.
 import sys, os, re, json, argparse, subprocess
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import styles
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -79,13 +81,17 @@ def classify(s):
     if 'быстро' in low or 'резко' in low: dur *= 0.75
     return act, round(dur, 1), emo
 
-def build(text, name=None, director=None, hero=None):
+def build(text, name=None, director=None, hero=None, style=None):
     low = text.lower()
     world = next((w for w, d in WORLDS.items() if re.search(d['words'], low)), 'sponza'); W = WORLDS[world]
     sky, skyk, sun, fog = next((v for pat, v in TIME_OF_DAY if re.search(pat, low)), TIME_OF_DAY[0][1])
     director = director or next((d for d, pat in DIRECTOR_HINTS if re.search(pat, low)), 'villeneuve')
     hero = hero or next((h for h, pat in HEROES if re.search(pat, low)), 'pilgrim')
     note = ''
+    # стиль: явно (--style restyle/neon) или по ключевым словам из style.json стилевых репозиториев; 'none' — без стиля
+    if style is None:
+        sn, sl = styles.pick(text); style = f'{sn}/{sl}' if sn else ''
+    if style == 'none': style = ''
     if hero not in READY: note = f'# актёр {hero} ещё в кастинге — сыграет pilgrim'; hero = 'pilgrim'
     beats = [classify(s) + (s,) for s in sentences(text)]
     # «срывается и бежит» — одно действие: соседние биты с одним глаголом движения сливаются
@@ -108,14 +114,19 @@ def build(text, name=None, director=None, hero=None):
         lines.append(f'[{tag}{" | " + emo if emo else ""}] {s[0].upper() + s[1:]}.')
     title = name or re.sub(r'[^a-zа-яё0-9]+', '_', ' '.join(low.split()[:3]))[:24].strip('_')
     head = [f'СЦЕНА: {text.strip().split(".")[0][:60]}', f'МИР: {world}', f'НЕБО: {sky} {skyk}', 'СОЛНЦЕ: ' + ' '.join(str(v) for v in sun),
-            f'ТУМАН: {fog}', 'ГЕРОЙ: Он', f'РЕЖИССЁР: {director}'] + ([note] if note else [])
-    return title, hero, '\n'.join(head + ['---'] + lines) + '\n'
+            f'ТУМАН: {fog}', 'ГЕРОЙ: Он', f'РЕЖИССЁР: {director}'] + ([f'СТИЛЬ: {style}'] if style else []) + ([note] if note else [])
+    return title, hero, style, '\n'.join(head + ['---'] + lines) + '\n'
 
 if __name__ == '__main__':
-    ap = argparse.ArgumentParser(); ap.add_argument('idea', nargs='+'); ap.add_argument('--name'); ap.add_argument('--director'); ap.add_argument('--hero')
+    ap = argparse.ArgumentParser(); ap.add_argument('idea', nargs='+'); ap.add_argument('--name'); ap.add_argument('--director'); ap.add_argument('--hero'); ap.add_argument('--style', help='restyle/neon, toon/cel …; none — без стиля; пусто — по словам идеи')
     ap.add_argument('--board', action='store_true'); ap.add_argument('--farm', action='store_true'); ap.add_argument('--width', type=int, default=1920); ap.add_argument('--samples', type=int, default=64)
     a = ap.parse_args()
-    title, hero, txt = build(' '.join(a.idea), a.name, a.director, a.hero)
+    title, hero, style, txt = build(' '.join(a.idea), a.name, a.director, a.hero, a.style)
+    st = styles.find(); sname = style.partition('/')[0]
+    if style and not styles.look_file(style, st):
+        s_ = st.get(sname, {})
+        print(f'стиль {style} ({s_.get("stage", "?")}): рисует в своём движке — ядро отдаёт сценарий и раскадровку;',
+              f'рендер: cd {s_.get("_dir", "kodfilm-" + sname)} && {s_.get("render", "node core/render.mjs --film <film>")}')
     d = os.path.join(ROOT, 'films', title); os.makedirs(d, exist_ok=True); p = os.path.join(d, 'script.txt')
     open(p, 'w').write(txt); print(txt); print('→', os.path.relpath(p, ROOT))
     if a.board:   # раскадровка быстрым движком: кадр на план — постановка видна за минуты
@@ -129,3 +140,7 @@ if __name__ == '__main__':
         subprocess.run(['gh', 'api', '-X', 'POST', 'repos/IlyaMargolin/kodfilm/actions/workflows/farm.yml/dispatches', '-f', 'ref=main',
                         '-f', f'inputs[script]={rel}', '-f', f'inputs[width]={a.width}', '-f', f'inputs[samples]={a.samples}', '-f', 'inputs[frames]=', '-f', f'inputs[hero]={hero}'], check=True)
         print('ферма запущена:', rel)
+        lf = style and styles.look_file(style, st)
+        if lf and json.load(open(lf, encoding='utf-8')).get('post'):   # на ферме стилевого репозитория нет: перерисовка после скачивания кадров
+            post = os.path.normpath(os.path.join(os.path.dirname(lf), json.load(open(lf, encoding='utf-8'))['post']))
+            print(f'после фермы: python3 {post} <папка кадров> <папка кадров>/meta.json')

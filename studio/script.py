@@ -7,6 +7,7 @@
 #   ТУМАН: 0.012
 #   ГЕРОЙ: Soldier
 #   РЕЖИССЁР: villeneuve
+#   СТИЛЬ: restyle/neon      (необязательно: стиль поверх ядра, см. studio/styles.py)
 #   ОПЕРАТОР: fraser          (необязательно: по умолчанию «свой» оператор режиссёра)
 #   КОМПОЗИТОР: zimmer        (необязательно)
 #   ---
@@ -50,6 +51,7 @@ class Scene:
     director: str = 'villeneuve'
     dp: str = None
     composer: str = None
+    style: str = ''     # «restyle/neon»: стиль из style.json стилевого репозитория (studio/styles.py)
     beats: list = field(default_factory=list)
 
 def _pt(s): x, y = s.split(','); return (float(x), float(y))
@@ -71,6 +73,7 @@ def parse(text):
             elif k == 'РЕЖИССЁР' or k == 'РЕЖИССЕР': sc.director = v.lower()
             elif k == 'ОПЕРАТОР': sc.dp = v.lower()
             elif k == 'КОМПОЗИТОР': sc.composer = v.lower()
+            elif k == 'СТИЛЬ': sc.style = v.lower()
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)
         if not m: continue
