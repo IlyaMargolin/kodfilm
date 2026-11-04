@@ -29,6 +29,13 @@ if a.director: scn.director = a.director
 # ---------- мир ----------
 sc = world.new_scene(a.w, a.h, FPS, engine='CYCLES' if a.engine == 'cycles' else 'BLENDER_EEVEE', TAA=a.samples if a.engine == 'cycles' else a.taa)
 sc.view_settings.exposure = a.ev if a.ev is not None else (0.9 if a.engine == 'cycles' else sc.view_settings.exposure)
+# --lens: имя стиля линзы (clean|cinema|anamorphic|dream) или путь к look.json стилевого репозитория:
+#   {"lens": "cinema", "passes": true, "post": "../kodfilm-restyle/post.py"} — post вызывается после рендера
+#   с аргументами <папка кадров> <meta.json> (стадия post из style.json: нужны beauty, depth, motion)
+LOOK = {}
+if a.lens.endswith('.json'):
+    LOOK = json.load(open(a.lens, encoding='utf-8')); LOOK['_dir'] = os.path.dirname(os.path.abspath(a.lens))
+    a.lens = LOOK.get('lens', 'cinema'); a.passes = a.passes or LOOK.get('passes', False)
 if a.lens != 'none':
     import lens; lens.setup(sc, a.lens)
 if a.passes:
@@ -191,7 +198,8 @@ steps.sort(key=lambda x: x['t'])
 SENSOR_W = 24.89                      # Super 35, как ARRI Alexa: глубина резкости «киношная», не фотографическая
 SENSOR_H = SENSOR_W * a.h / a.w
 # моушн-блюр: затвор 180° (выдержка 1/48 при 24 к/с) — стандарт кино
-sc.render.use_motion_blur = True; sc.render.motion_blur_shutter = 0.5
+sc.render.use_motion_blur = not a.passes;   # со слоями AOV блюр делает пост по векторам движения
+sc.render.motion_blur_shutter = 0.5
 if hasattr(sc.eevee, 'motion_blur_steps'): sc.eevee.motion_blur_steps = 1
 dg = None
 def ray_block(origin, target):
@@ -488,3 +496,8 @@ for f in frames:
     sc.camera = cam; sc.frame_set(fi, subframe=fr)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)
+if LOOK.get('post') and frames:
+    import subprocess
+    post = os.path.join(LOOK['_dir'], LOOK['post'])
+    print('post', post, flush=True)
+    subprocess.run([sys.executable if post.endswith('.py') else post] + ([post] if post.endswith('.py') else []) + [os.path.abspath(a.out), os.path.join(os.path.abspath(a.out), 'meta.json')], check=False)

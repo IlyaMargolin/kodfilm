@@ -49,6 +49,10 @@ def passes(scene, outdir, mist_far=60.0):
     Вызывать после setup(): подключается к уже собранному дереву композитора."""
     vl = scene.view_layers[0]
     vl.use_pass_z = True; vl.use_pass_mist = True; vl.use_pass_normal = True
+    # векторы движения (для нейро-рестайла и ретайма): в Cycles доступны только без motion blur — его добавит пост
+    scene.render.use_motion_blur = False
+    try: vl.use_pass_vector = True
+    except AttributeError: pass
     try: vl.use_pass_cryptomatte_object = True
     except AttributeError: pass
     if scene.world:
@@ -57,7 +61,8 @@ def passes(scene, outdir, mist_far=60.0):
     rl = next(n for n in ng.nodes if n.bl_idname == 'CompositorNodeRLayers')
     exr = ng.nodes.new('CompositorNodeOutputFile'); exr.directory = os.path.join(os.path.abspath(outdir), 'passes'); exr.file_name = 'p_#####'
     exr.format.media_type = 'MULTI_LAYER_IMAGE'; exr.format.file_format = 'OPEN_EXR_MULTILAYER'; exr.format.color_depth = '16'
-    for name, kind, src in (('depth', 'FLOAT', 'Depth'), ('mist', 'FLOAT', 'Mist'), ('normal', 'VECTOR', 'Normal'), ('beauty', 'RGBA', 'Image')):
+    for name, kind, src in (('depth', 'FLOAT', 'Depth'), ('mist', 'FLOAT', 'Mist'), ('normal', 'VECTOR', 'Normal'), ('beauty', 'RGBA', 'Image'),
+                            ('motion', 'RGBA', 'Vector'), ('crypto00', 'RGBA', 'CryptoObject00'), ('crypto01', 'RGBA', 'CryptoObject01')):
         exr.file_output_items.new(kind, name)
         if src in rl.outputs: ng.links.new(rl.outputs[src], exr.inputs[name])
     png = ng.nodes.new('CompositorNodeOutputFile'); png.directory = os.path.join(os.path.abspath(outdir), 'depth'); png.file_name = 'd_#####_'
