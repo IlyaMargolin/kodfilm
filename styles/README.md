@@ -12,7 +12,7 @@
 | [`kodfilm-toon`](https://github.com/IlyaMargolin/kodfilm-toon) | 3D-сцена, отрисованная как рисунок: cel-shading, контуры, живописные текстуры | Suits, The Very Pulse of the Machine, Blindspot, The Witness, Fish Night | создан, первый тест работает |
 | [`kodfilm-2d`](https://github.com/IlyaMargolin/kodfilm-2d) | чистое 2D: покадровый рисунок, вектор, мел, тушь, акварель | Zima Blue, Good Hunting, Kill Team Kill, 400 Boys | создан, первый тест работает |
 | [`kodfilm-miniature`](https://github.com/IlyaMargolin/kodfilm-miniature) | стоп-моушен, пластилин, марионетки, тилт-шифт миниатюра | All Through the House, Night of the Mini Dead, Can't Stop | создан, первый тест работает |
-| `kodfilm-restyle` | живописная перерисовка поверх готового 3D-рендера: шейдерная (Кувахара, палитра) и нейронная (Wan2.1 VACE по глубине) | Jibaro, The Witness, Fish Night; референсы Ильи с мото на неоновом закате | заготовка готова, ждёт пустой репо |
+| [`kodfilm-restyle`](https://github.com/IlyaMargolin/kodfilm-restyle) | живописная перерисовка поверх готового 3D-рендера: шейдерная (Кувахара, палитра) и нейронная (Wan2.1 VACE по глубине) | Jibaro, The Witness, Fish Night; референсы Ильи с мото на неоновом закате | создан, тест raw и neon работает |
 
 Live action (Ice Age, Golgotha) мы не делаем.
 
