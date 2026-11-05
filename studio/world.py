@@ -72,6 +72,39 @@ def set_sponza():
     naturalize(objs)
     return objs
 
+def set_loft(size=(14.0, 10.0, 4.2), window=(10.0, 3.2, 0.6)):
+    """Лофт с огромным окном (как у жёлтого робота «Dummy»): окно — контровой свет и город за стеклом из HDRI,
+    бетонный пол ловит отражение окна, стены светлые и шершавые. Окно — на стене +Y; ставь героя спиной к окну."""
+    import bmesh
+    X, Y, Z = size; ww, wh, wz = window; objs = []
+    def box(name, loc, dims, col, rough):
+        bpy.ops.mesh.primitive_cube_add(size=1, location=loc); o = bpy.context.object; o.name = name; o.scale = dims
+        bpy.ops.object.transform_apply(scale=True)
+        m = bpy.data.materials.new(name); m.use_nodes = True
+        p = next(n for n in m.node_tree.nodes if n.bl_idname == 'ShaderNodeBsdfPrincipled')
+        p.inputs['Base Color'].default_value = (*col, 1); p.inputs['Roughness'].default_value = rough
+        o.data.materials.append(m); objs.append(o); return o
+    t = 0.3
+    box('floor', (0, 0, -t / 2), (X, Y, t), (0.09, 0.09, 0.095), 0.3)          # тёмный бетон, полуматовый: окно отражается пятном, робот читается на тёмном (замер: 0.32 — «белое на белом»)
+    box('ceiling', (0, 0, Z + t / 2), (X, Y, t), (0.3, 0.29, 0.28), 0.9)
+    box('wall_s', (0, -Y / 2 - t / 2, Z / 2), (X, t, Z), (0.24, 0.23, 0.22), 0.85)
+    box('wall_w', (-X / 2 - t / 2, 0, Z / 2), (t, Y, Z), (0.24, 0.23, 0.22), 0.85)
+    box('wall_e', (X / 2 + t / 2, 0, Z / 2), (t, Y, Z), (0.24, 0.23, 0.22), 0.85)
+    yN = Y / 2 + t / 2; side = (X - ww) / 2
+    box('wall_n_l', (-X / 2 + side / 2, yN, Z / 2), (side, t, Z), (0.2, 0.19, 0.18), 0.85)
+    box('wall_n_r', (X / 2 - side / 2, yN, Z / 2), (side, t, Z), (0.2, 0.19, 0.18), 0.85)
+    box('wall_n_b', (0, yN, wz / 2), (ww, t, wz), (0.2, 0.19, 0.18), 0.85)
+    top = Z - wz - wh
+    if top > 0.01: box('wall_n_t', (0, yN, Z - top / 2), (ww, t, top), (0.2, 0.19, 0.18), 0.85)
+    # переплёт окна: тонкие тёмные стойки и ригель — окно читается как окно, а не дыра
+    n = 5
+    for i in range(n + 1):
+        x = -ww / 2 + ww * i / n
+        box(f'mullion{i}', (x, yN - t / 2 + 0.03, wz + wh / 2), (0.07, 0.06, wh), (0.03, 0.03, 0.032), 0.4)
+    box('transom', (0, yN - t / 2 + 0.03, wz + wh * 0.72), (ww, 0.06, 0.06), (0.03, 0.03, 0.032), 0.4)
+    print('декорация: лофт', size, 'окно', window, flush=True)
+    return objs
+
 def naturalize(objs, rough_floor=0.42, breakup=0.14):
     """Проход «натуралистичности» по материалам купленной/скачанной локации (как look-dev у Rockstar: ничего не
     блестит как пластик). Игровые PBR-текстуры часто слишком гладкие: листья с roughness 0.2, цепи-хром.

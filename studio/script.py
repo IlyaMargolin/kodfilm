@@ -54,7 +54,10 @@ class Scene:
     palette: str = ''   # ведущая палитра сцены (studio/palette.py), пусто — по небу
     style: str = ''     # «restyle/neon»: стиль из style.json стилевого репозитория (studio/styles.py)
     look: str = ''      # ВИД: пресет пульта стиля (studio/look.py: кино, pixar, нуар, неон, тун) или путь к look.json
-    look_words: list = field(default_factory=list)   # СВЕТ/ДЫМКА/ОБЪЁМ/НЕОН/... — правки пульта на сцену
+    look_words: list = field(default_factory=list)
+    place: tuple = None    # МЕСТО: x,y — где герой стоит в начале (если первый бит без пути)
+    face: tuple = None     # ЛИЦОМ: dx,dy — куда он смотрит в начале
+    practicals: list = field(default_factory=list)   # ПРАКТИК: кольцо x,y,z r #цвет — свет в кадре (studio/neon.py)   # СВЕТ/ДЫМКА/ОБЪЁМ/НЕОН/... — правки пульта на сцену
     beats: list = field(default_factory=list)
 
 def _pt(s): x, y = s.split(','); return (float(x), float(y))
@@ -78,6 +81,13 @@ def parse(text):
             elif k == 'КОМПОЗИТОР': sc.composer = v.lower()
             elif k == 'СТИЛЬ': sc.style = v.lower()
             elif k == 'ПАЛИТРА': sc.palette = v.lower()
+            elif k == 'МЕСТО': sc.place = _pt(v)
+            elif k == 'ЛИЦОМ': sc.face = _pt(v)
+            elif k == 'ПРАКТИК':
+                pp = v.split(); kind = pp[0].lower()
+                xyz = tuple(float(x) for x in pp[1].split(',')); r = float(pp[2]) if len(pp) > 2 else 0.5
+                col = next(('#' + x.lstrip('#') for x in pp[3:] if re.fullmatch(r'#?[0-9a-fA-F]{6}', x)), '#FFB060')   # цвет без «#»: «#» в шапке — комментарий
+                sc.practicals.append(dict(kind=kind, at=xyz, r=r, color=col))
             elif k == 'ВИД': sc.look = v.lower() if not v.endswith('.json') else v
             elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'КОНТРАСТ', 'ВИНЬЕТКА', 'ОПТИКА'):
                 sc.look_words.append(('ОБЪЁМ' if k == 'ОБЪЕМ' else k, v.lower() if k in ('СВЕТ', 'ОПТИКА') else v))

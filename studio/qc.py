@@ -50,14 +50,14 @@ def separation(img, box):
     L = luma(img); H, W = L.shape
     x0, y0, x1, y1 = box; bw = x1 - x0
     if bw <= 0 or bw > 0.7 or y1 - y0 < 0.08: return None
-    ya, yb = max(0.0, y0 + 0.15 * (y1 - y0)), min(1.0, y0 + 0.75 * (y1 - y0))
+    ya, yb = max(0.0, y0 + 0.12 * (y1 - y0)), min(1.0, y0 + 0.45 * (y1 - y0))   # грудь и плечи: у тонких фигур (роботы) ниже — фон между ног
     if yb - ya < 0.05: return None
     cx = (x0 + x1) / 2
     def reg(a, b):
         a, b = max(0.0, a), min(1.0, b)
         if b - a < 0.01: return None
         return img[int(ya * H):int(yb * H), int(a * W):int(b * W)].reshape(-1, 3)
-    core = reg(cx - 0.2 * bw, cx + 0.2 * bw)
+    core = reg(cx - 0.15 * bw, cx + 0.15 * bw)
     ring = [r for r in (reg(x0 - 0.6 * bw, x0 - 0.05 * bw), reg(x1 + 0.05 * bw, x1 + 0.6 * bw)) if r is not None and len(r) > 20]
     if core is None or len(core) < 20 or not ring: return None
     bg = np.concatenate(ring); lw = np.array([0.2126, 0.7152, 0.0722], np.float32)

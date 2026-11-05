@@ -58,3 +58,16 @@ def place(scene, center, colors=('#FF2E88', '#2EC8FF'), count=3, strength=1.0, l
         used.append(loc); out.append((t, lo))
     print(f'неон: {len(out)} трубок у {tuple(round(c, 1) for c in center)}', flush=True)
     return out
+
+def ring(scene, center, radius=0.55, color='#FFB060', strength=1.0, tube=0.018):
+    """Светящееся кольцо вокруг героя (как в «Dummy»): видно в кадре, отражается в пластике и металле и само
+    освещает героя снизу-сбоку тёплым светом. Свет — сама трубка (излучение видно диффузу: кольцо близко,
+    точечный источник дал бы неверную форму блика); шум снимает денойз."""
+    col = _lin(color)
+    bpy.ops.mesh.primitive_torus_add(major_radius=radius, minor_radius=tube, major_segments=96, minor_segments=12, location=center)
+    t = bpy.context.object; t.name = 'practical_ring'
+    for p in t.data.polygons: p.use_smooth = True
+    t.data.materials.append(_material(t.name, col, 25.0 * strength))
+    t.visible_shadow = False
+    print(f'практик: кольцо r={radius} у {tuple(round(c, 2) for c in center)}', flush=True)
+    return t

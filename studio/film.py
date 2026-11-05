@@ -59,11 +59,13 @@ if a.lens != 'none' and a.air > 0: depth.setup(sc, far=depth.FAR.get(scn.world, 
 if a.passes:
     import lens; lens.passes(sc, a.out)
 if scn.world == 'sponza': world.set_sponza()
+elif scn.world == 'loft': world.set_loft()
 world.hdri(scn.sky[0], scn.sky[1] * LK['light']['ambient'])   # стиль: светлее/темнее тени от неба
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
 from crew import profile as _cp
 HAZE = 0.6 + 0.5 * _cp(scn.director, getattr(scn, 'dp', None))['light'].get('haze', 0.8)   # дымка — инструмент оператора: контровой становится лучами
-fogobj = world.fog(scn.fog * HAZE * LK['air']['fog'] * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
+FOG_BOX = {'loft': (13.8, 9.8, 4.4)}   # туман только внутри декорации: снаружи он белит вид за окном
+fogobj = world.fog(scn.fog * HAZE * LK['air']['fog'] * (a.fogk if a.engine == 'cycles' else 1.0), size=FOG_BOX.get(scn.world, (40, 24, 16))) if scn.fog > 0 else None
 
 # ---------- постановка героя ----------
 import cast
@@ -102,8 +104,8 @@ for i, bt in enumerate(scn.beats):
 TOTAL = int(round(t * FPS)) + 1
 
 # траектория корня и поворот, покадрово
-path = []; cur = Vector((*scn.beats[0].a, 0)) if scn.beats[0].a else Vector((0, 0, 0))
-first_dir = next(((Vector((*b.b, 0)) - Vector((*b.a, 0))).normalized() for b in scn.beats if b.a), Vector((1, 0, 0)))
+path = []; cur = Vector((*scn.beats[0].a, 0)) if scn.beats[0].a else Vector((*scn.place, 0)) if scn.place else Vector((0, 0, 0))
+first_dir = Vector((*scn.face, 0)).normalized() if scn.face else next(((Vector((*b.b, 0)) - Vector((*b.a, 0))).normalized() for b in scn.beats if b.a), Vector((1, 0, 0)))
 yaw = math.atan2(first_dir.y, first_dir.x) - math.pi / 2
 for f in range(1, TOTAL + 1):
     tt = (f - 1) / FPS
@@ -290,7 +292,7 @@ def framing(pos, P, lens, scr=(0.0, 0.0)):
 ALLOW_OCC = {'EWS': 0.3, 'WS': 0.22, 'FS': 0.15}     # на общих арки по краям — рамка кадра; на крупных — брак
 LAYER = {} if os.environ.get('NOLAYER') else {'EWS': 0.3, 'WS': 0.3, 'FS': 0.25, 'MS': 0.2}   # три плана в кадре: премия за передний план у края на общих и средних
 
-BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
+BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0)), loft=((-6.6, 6.6), (-4.6, 4.6), (0.2, 3.8))).get(scn.world)
 def clamp(v):
     if not BOUNDS: return v
     return Vector(tuple(min(hi, max(lo, c)) for c, (lo, hi) in zip(v, BOUNDS)))
@@ -531,6 +533,9 @@ for si, sh in enumerate(shots):
     cams.append((f0, f1, cam))
 
 if fogobj: fogobj.hide_viewport = False
+for pr_ in scn.practicals:   # ПРАКТИК: свет в кадре из сценария (кольцо, трубка); после выбора камер — лучи постановщика его не видят
+    import neon
+    if pr_['kind'] in ('кольцо', 'ring'): neon.ring(sc, Vector(pr_['at']), pr_['r'], pr_['color'])
 
 # ---------- слоумо: перерасчёт времени ----------
 # План со speed<1 снят «высокоскоростной камерой»: выходной кадр берёт сцену в дробный момент (subframe),
