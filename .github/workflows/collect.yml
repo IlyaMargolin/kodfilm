@@ -2,8 +2,8 @@ name: Collect Kaggle output
 on:
   workflow_dispatch:
     inputs:
-      kernel: { description: 'Имя ноутбука без пользователя', default: 'kodfilm-hram-test-run' }
-      branch: { description: 'Ветка для результата', default: 'results-neural' }
+      kernel: { description: 'Имя ноутбука без пользователя', default: 'kodfilm-farm-run-pilgrim' }
+      branch: { description: 'Ветка для результата', default: 'results-farm-pilgrim' }
       account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
 permissions:
   contents: write
