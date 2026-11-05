@@ -51,6 +51,9 @@ jobs:
             S=$(kaggle kernels status $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} 2>&1); echo "$(date +%T) $S"
             echo "$S" | grep -qiE 'complete|error|cancel' && break; sleep 60
           done
+          # Kaggle даёт ноутбуку до 12 ч, а задание GitHub живёт ≤ 6 ч: если рендер ещё идёт — честно падаем,
+          # результат потом забирает collect.yml (иначе «зелёный» запуск без кадров выглядит как успех)
+          echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }})"; exit 1; }
           mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
       - name: Save result to branch

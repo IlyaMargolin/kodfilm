@@ -15,6 +15,8 @@ jobs:
       - run: pip install -q -U kaggle
       - run: |
           U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))")
+          S=$(kaggle kernels status $U/${{ github.event.inputs.kernel }} 2>&1); echo "$S"
+          echo "$S" | grep -qi 'complete' || { echo "::error::ноутбук ещё не закончил: вывод был бы от прошлой версии"; exit 1; }
           mkdir -p result && kaggle kernels output $U/${{ github.event.inputs.kernel }} -p result
           cd result && rm -f *.log && git init -q && git checkout -q -b B && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
