@@ -8,6 +8,7 @@ on:
       samples: { description: 'Сэмплов на пиксель (с денойзом хватает 64–128)', default: '96' }
       frames:  { description: 'Кадры: пусто = все, или 1-100', default: '' }
       hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
+      part:    { description: 'Часть фильма (1, 2, 3…) для параллельных ноутбуков: своё имя ноутбука и ветки; кадры задать в frames', default: '' }
 
 permissions:
   contents: write
@@ -39,7 +40,7 @@ jobs:
           U=${{ steps.me.outputs.user }}
           mkdir -p kr && cp neural/farm.py kr/
           cat > kr/kernel-metadata.json <<META
-          {"id":"$U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}","title":"kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}","code_file":"farm.py","language":"python","kernel_type":"script",
+          {"id":"$U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","title":"kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","code_file":"farm.py","language":"python","kernel_type":"script",
            "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/${{ steps.me.outputs.ds }}"]}
           META
           kaggle kernels push -p kr
@@ -48,20 +49,20 @@ jobs:
           U=${{ steps.me.outputs.user }}
           sleep 60
           for i in $(seq 1 330); do
-            S=$(kaggle kernels status $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} 2>&1); echo "$(date +%T) $S"
+            S=$(kaggle kernels status $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} 2>&1); echo "$(date +%T) $S"
             echo "$S" | grep -qiE 'complete|error|cancel' && break; sleep 60
           done
           # Kaggle даёт ноутбуку до 12 ч, а задание GitHub живёт ≤ 6 ч: если рендер ещё идёт — честно падаем,
           # результат потом забирает collect.yml (иначе «зелёный» запуск без кадров выглядит как успех)
-          echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }})"; exit 1; }
-          mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} -p result || true
+          echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }})"; exit 1; }
+          mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
       - name: Save result to branch
         if: always()
         run: |
           cd result && rm -f *.log && git init -q && git checkout -q -b results-farm && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
-          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }} || echo "nothing to save"
+          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} || echo "nothing to save"
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: farm-render, path: result/, retention-days: 14 }
