@@ -48,6 +48,7 @@ LK = lookmod.load(a.look or scn.look or None, lookmod.from_words(scn.look_words)
 if a.lens == 'cinema' and not LOOK: a.lens = LK['optics']['lens']
 a.air *= LK['air']['depth']
 if LK['color']['palette']: scn.palette = LK['color']['palette']
+lookmod.tone(sc, LK)
 print('вид:', a.look or scn.look or 'кино', {k: v for k, v in LK.items() if v != lookmod.DEFAULT[k]}, flush=True)
 if a.lens != 'none':
     import lens; lens.setup(sc, a.lens)
@@ -58,7 +59,7 @@ if a.lens != 'none' and a.air > 0: depth.setup(sc, far=depth.FAR.get(scn.world, 
 if a.passes:
     import lens; lens.passes(sc, a.out)
 if scn.world == 'sponza': world.set_sponza()
-world.hdri(scn.sky[0], scn.sky[1])
+world.hdri(scn.sky[0], scn.sky[1] * LK['light']['ambient'])   # стиль: светлее/темнее тени от неба
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
 from crew import profile as _cp
 HAZE = 0.6 + 0.5 * _cp(scn.director, getattr(scn, 'dp', None))['light'].get('haze', 0.8)   # дымка — инструмент оператора: контровой становится лучами
@@ -371,36 +372,46 @@ for si, sh in enumerate(shots):
     # «оператор ищет точку»: проверяем ВЕСЬ путь камеры — не внутри стены/цепи/колонны и ничего не перекрывает героя
     plan_ok = None
     if not sh.pov and not sh.poi:
-        best = (-1, 0, 1.0, 0.0)
-        _r = composition.RULES.get(sh.comp or '', {})
-        FG = 'frame' if _r.get('frame') else 'fg' if _r.get('foreground') else None
-        tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7, 0.55) for de in (0, 8, -6, 18) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
-        for o, kd, de in tries:
-            fs = list(range(f0, f1 + 1, 3)) + [f1]
-            allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0; bon = 0.0
-            for fm in fs:
-                q, Pq = raw_pos(fm, o, kd, de)
-                if not path_ok(q, Pq, 0.3 if sh.move == 'passby' else 0.5): continue
-                scr = (0.0, 0.0)
-                if sh.comp:      # куда композиция поставит героя из этой точки (как в покадровом цикле ниже)
-                    pp_ = track_pts[min(fm, TOTAL) - 1]; fw_ = Vector((math.cos(pp_['yaw'] + math.pi / 2), math.sin(pp_['yaw'] + math.pi / 2), 0))
-                    dv_ = Pq - q; yd = math.atan2(dv_.y, dv_.x); g_ = 1 if (fw_.x * math.sin(yd) - fw_.y * math.cos(yd)) >= -0.15 else -1
-                    sx_, sy_ = composition.screen_point(sh.comp, g_, a.w / a.h); scr = (sx_, sy_ / (composition.VISIBLE * a.w / a.h))
-                if FG:   # передний план — приём: края закрыты вплотную к объективу, герой чист
-                    hc, el_, er_ = framing(q, Pq, sh.lens, scr); good += 1; pen += hc * 6
-                    edge = min(el_, er_) * 2 if FG == 'frame' else max(el_, er_)
-                    bon += min(edge, 0.35) - max(0.0, max(el_, er_) - 0.55)
-                else:
-                    oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
-                    if sh.size in LAYER:   # объём: мягкий передний план у края (колонна, арка) — слабая премия, ракурс режиссёра важнее
-                        hc, el_, er_ = framing(q, Pq, sh.lens, scr); pen += hc * 6
-                        bon += LAYER[sh.size] * min(max(el_, er_), 0.3) - max(0.0, max(el_, er_) - 0.45)
-            ok = good - pen + 1.5 * bon
-            sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
-            if os.environ.get('CAMDBG') == str(si): print('try', o, kd, de, 'good', good, '/', len(fs), 'pen', round(pen, 2), 'score', round(sc_, 3))
-            if sc_ > best[0]: best = (sc_, o, kd, de)
-            if good == len(fs) and pen == 0 and (bon / len(fs) > (0.15 if FG else 0.05) or (not FG and sh.size not in LAYER)): break
-        _, az_fix, kd_fix, de_fix = best
+        for attempt in range(2):   # вторая попытка: ракурс режиссёра невозможен (колоннада, стена) — снимаем спереди-сбоку, а не из-за спины
+            best = (-1, 0, 1.0, 0.0, 0.0)
+            _r = composition.RULES.get(sh.comp or '', {})
+            FG = 'frame' if _r.get('frame') else 'fg' if _r.get('foreground') else None
+            tries = [(o, kd, de) for kd in (1.0, 0.85, 0.7, 0.55) for de in (0, 8, -6, 18) for o in (0, 15, -15, 30, -30, 45, -45, 60, -60, 90, -90)]
+            for o, kd, de in tries:
+                fs = list(range(f0, f1 + 1, 3)) + [f1]
+                allow = ALLOW_OCC.get(sh.size, 0.1); good = 0; pen = 0.0; bon = 0.0
+                for fm in fs:
+                    q, Pq = raw_pos(fm, o, kd, de)
+                    if not path_ok(q, Pq, 0.3 if sh.move == 'passby' else 0.5): continue
+                    scr = (0.0, 0.0)
+                    if sh.comp:      # куда композиция поставит героя из этой точки (как в покадровом цикле ниже)
+                        pp_ = track_pts[min(fm, TOTAL) - 1]; fw_ = Vector((math.cos(pp_['yaw'] + math.pi / 2), math.sin(pp_['yaw'] + math.pi / 2), 0))
+                        dv_ = Pq - q; yd = math.atan2(dv_.y, dv_.x); g_ = 1 if (fw_.x * math.sin(yd) - fw_.y * math.cos(yd)) >= -0.15 else -1
+                        sx_, sy_ = composition.screen_point(sh.comp, g_, a.w / a.h); scr = (sx_, sy_ / (composition.VISIBLE * a.w / a.h))
+                    if sh.size in ('MS', 'FS', 'WS', 'EWS'):   # голова в кадре: на средних и общих срезанная макушка — брак (бег сбоку из-за спины)
+                        fw_c = (Pq - q).normalized(); rt_c = fw_c.cross(Vector((0, 0, 1))).normalized(); up_c = rt_c.cross(fw_c)
+                        vh = subject(fm, 'head') + Vector((0, 0, 0.12)) - q; th_c = SENSOR_W / 2 / sh.lens * a.h / a.w
+                        if vh.dot(fw_c) <= 0 or vh.dot(up_c) / vh.dot(fw_c) / th_c + 2 * scr[1] > 0.95: pen += 1.0; good += 1; continue
+                    if FG:   # передний план — приём: края закрыты вплотную к объективу, герой чист
+                        hc, el_, er_ = framing(q, Pq, sh.lens, scr); good += 1; pen += hc * 6
+                        edge = min(el_, er_) * 2 if FG == 'frame' else max(el_, er_)
+                        bon += min(edge, 0.35) - max(0.0, max(el_, er_) - 0.55)
+                    else:
+                        oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
+                        if sh.size in LAYER:   # объём: мягкий передний план у края (колонна, арка) — слабая премия, ракурс режиссёра важнее
+                            if (Pq - q).length < 0.75 * dist * kd:   # стена притянула камеру к герою: общий план стал крупным — брак, а не «передний план»
+                                pen += 1.0; continue
+                            _, el_, er_ = framing(q, Pq, sh.lens, scr)   # закрытость героя уже считает occlusion (луч «герой» у framing ловит пол на общих)
+                            bon += LAYER[sh.size] * min(max(el_, er_), 0.3) - max(0.0, max(el_, er_) - 0.45)
+                ok = good - pen + 1.5 * bon
+                sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de) if good else -1.0   # ни одной годной точки — не кандидат
+                if os.environ.get('CAMDBG') == str(si): print('try', o, kd, de, 'good', good, '/', len(fs), 'pen', round(pen, 2), 'score', round(sc_, 3))
+                if sc_ > best[0]: best = (sc_, o, kd, de, (good - pen) / len(fs))
+                if good == len(fs) and pen == 0 and (bon / len(fs) > (0.15 if FG else 0.05) or (not FG and sh.size not in LAYER)): break
+            if attempt or best[4] >= 0.5 or sh.size not in ('MS', 'FS', 'WS') or not moving or abs(sh.azim) < 45: break
+            print(f'  план {si}: с азимута {sh.azim}° годных точек {best[4]:.0%} — снимаю спереди-сбоку', flush=True)
+            sh.azim = math.copysign(25, sh.azim); sh.note = (sh.note or '') + ' (спереди: сбоку стена)'
+        _, az_fix, kd_fix, de_fix, _ = best
     else:
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
     # разгон фильтров до склейки: камера входит в план уже в движении, без рывка «с места» в первых кадрах
@@ -460,6 +471,13 @@ for si, sh in enumerate(shots):
             q = Vector((math.cos(pit_c) * math.cos(yaw_c), math.cos(pit_c) * math.sin(yaw_c), math.sin(pit_c))).to_track_quat('-Z', 'Y')
         else:
             q = dvec.to_track_quat('-Z', 'Y')
+            if not sh.poi and not sh.pov and sh.size in ('CU', 'MCU', 'MS', 'FS', 'WS'):   # запас над головой и без композиции
+                crown = subject(f, 'head') + Vector((0, 0, 0.24)); dc = crown - cam.location
+                ang = math.atan2(dc.z, math.hypot(dc.x, dc.y)) - pit_d
+                lim = math.atan(SENSOR_H / 2 / sh.lens) * 0.86
+                if ang > lim:
+                    pit2 = pit_d + ang - lim
+                    q = Vector((math.cos(pit2) * math.cos(yaw_d), math.cos(pit2) * math.sin(yaw_d), math.sin(pit2))).to_track_quat('-Z', 'Y')
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
         if KEY: cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
         # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке

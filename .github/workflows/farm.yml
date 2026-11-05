@@ -9,6 +9,7 @@ on:
       frames:  { description: 'Кадры: пусто = все, или 1-100', default: '' }
       hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
       part:    { description: 'Часть фильма (1, 2, 3…) для параллельных ноутбуков: своё имя ноутбука и ветки; кадры задать в frames', default: '' }
+      air:     { description: 'Дымка по глубине (studio/depth.py): пусто = по стилю, 0 = выкл (для вклейки в фильм, снятый без неё)', default: '' }
       account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
 
 permissions:
@@ -29,7 +30,7 @@ jobs:
           U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))")
           echo "user=$U" >> $GITHUB_OUTPUT
           mkdir -p ds/assets && cp -r studio films ds/ && cp assets/fetch.sh ds/assets/
-          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}',hero='${{ github.event.inputs.hero }}'),open('ds/farm.json','w'))"
+          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}',hero='${{ github.event.inputs.hero }}',air='${{ github.event.inputs.air }}'),open('ds/farm.json','w'))"
           D=kodfilm-farm-${{ github.run_number }}; echo "ds=$D" >> $GITHUB_OUTPUT
           echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
           # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром

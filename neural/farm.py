@@ -16,6 +16,7 @@ t0 = time.time(); procs = []
 args = f"--script {job['script']} --out {OUT}/frames --w {job.get('w', 1920)} --engine cycles --samples {job.get('samples', 96)}"
 if job.get('frames'): args += f" --frames {job['frames']}"
 if job.get('hero'): args += f" --hero {job['hero']}"
+if str(job.get('air', '')).strip() != '': args += f" --air {float(job['air'])}"
 for k in range(n):
     env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(k))
     procs.append(subprocess.Popen(f'cd {W} && {sys.executable} studio/film.py -- {args} --chunk {k} --chunks {n} > {OUT}/log_{k}.txt 2>&1', shell=True, env=env))

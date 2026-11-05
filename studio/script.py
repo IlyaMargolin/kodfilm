@@ -79,7 +79,7 @@ def parse(text):
             elif k == 'СТИЛЬ': sc.style = v.lower()
             elif k == 'ПАЛИТРА': sc.palette = v.lower()
             elif k == 'ВИД': sc.look = v.lower() if not v.endswith('.json') else v
-            elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'ВИНЬЕТКА', 'ОПТИКА'):
+            elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'КОНТРАСТ', 'ВИНЬЕТКА', 'ОПТИКА'):
                 sc.look_words.append(('ОБЪЁМ' if k == 'ОБЪЕМ' else k, v.lower() if k in ('СВЕТ', 'ОПТИКА') else v))
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)
