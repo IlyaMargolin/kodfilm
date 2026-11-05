@@ -81,6 +81,9 @@ if SPEC.get('human'):        # живой человек: своё тело (Mak
         import groom
         groom.groom(body, color=tuple(hs.get('hair', (0.03, 0.022, 0.016))), grey=hs.get('grey', 0.25), beard_len=hs.get('beard', 0.03 if hs.get('gender', 1) > 0.5 else 0),
                     hooded=hs.get('wardrobe') == 'robe' and hs.get('hood', True))
+if SPEC.get('mech'):         # робот: твёрдые детали на костях того же скелета (studio/mech.py), исходная сетка прячется
+    import mech
+    mech.build(hero.arm, SPEC['mech'], meshes=[o_ for o_ in bpy.data.objects if o_.type == 'MESH' and (o_.parent == hero.arm or any(m.type == 'ARMATURE' and m.object == hero.arm for m in o_.modifiers))])
 # клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
 with world.bones_only():   # позовые циклы без пересчёта сеток и волос
     for _act in ('idle', 'run'):

@@ -23,6 +23,7 @@ def resolve(name, film_dir=None):
             if r['role'].lower() == key or r['actor'] == key: key = r['actor']; break
     for k, a in A.items():
         if key in (k, a['name'].lower()) and a.get('human'): return a['human'].get('skeleton', 'Soldier.glb')
+        if key in (k, a['name'].lower()) and a.get('mech'): return a['mech'].get('skeleton', 'Soldier.glb')
         if key in (k, a['name'].lower()) and a.get('model'): return a['model']
         if a.get('model') and key == a['model'].lower().replace('.glb', ''): return a['model']
     return name + ('' if name.endswith('.glb') else '.glb')
