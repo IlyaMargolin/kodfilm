@@ -45,7 +45,9 @@ jobs:
           {"id":"$U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","title":"kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","code_file":"farm.py","language":"python","kernel_type":"script",
            "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/${{ steps.me.outputs.ds }}"]}
           META
-          kaggle kernels push -p kr
+          kaggle kernels push -p kr | tee /tmp/push.txt
+          # Kaggle отвечает кодом 0 и на отказ (например, «Maximum batch GPU session count of 2 reached») — ловим по тексту
+          if grep -qiE 'error|maximum' /tmp/push.txt; then echo "::error::Kaggle не принял ноутбук: $(cat /tmp/push.txt)"; exit 1; fi
       - name: Wait for render
         run: |
           U=${{ steps.me.outputs.user }}
