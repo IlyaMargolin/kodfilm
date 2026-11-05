@@ -4,13 +4,14 @@ on:
     inputs:
       kernel: { description: 'Имя ноутбука без пользователя', default: 'kodfilm-hram-test-run' }
       branch: { description: 'Ветка для результата', default: 'results-neural' }
+      account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
 permissions:
   contents: write
 jobs:
   collect:
     runs-on: ubuntu-latest
     env:
-      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_API_TOKEN: ${{ github.event.inputs.account == '2' && secrets.KAGGLE_API_TOKEN_2 || secrets.KAGGLE_API_TOKEN }}
     steps:
       - run: pip install -q -U kaggle
       - run: |

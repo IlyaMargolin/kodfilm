@@ -9,6 +9,7 @@ on:
       frames:  { description: 'Кадры: пусто = все, или 1-100', default: '' }
       hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
       part:    { description: 'Часть фильма (1, 2, 3…) для параллельных ноутбуков: своё имя ноутбука и ветки; кадры задать в frames', default: '' }
+      account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
 
 permissions:
   contents: write
@@ -18,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 350
     env:
-      KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
+      KAGGLE_API_TOKEN: ${{ github.event.inputs.account == '2' && secrets.KAGGLE_API_TOKEN_2 || secrets.KAGGLE_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - run: pip install -q -U kaggle
