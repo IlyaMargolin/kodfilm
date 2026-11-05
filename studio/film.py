@@ -210,7 +210,7 @@ for key in ('fl', 'fr'):
 steps.sort(key=lambda x: x['t'])
 
 # ---------- камеры ----------
-SENSOR_W = 24.89                      # Super 35, как ARRI Alexa: глубина резкости «киношная», не фотографическая
+SENSOR_W = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crew', 'lens.json'), encoding='utf-8'))['sensor_w_mm']   # Super 35, как ARRI Alexa (общая таблица с JS-движком)
 SENSOR_H = SENSOR_W * a.h / a.w
 # моушн-блюр: затвор 180° (выдержка 1/48 при 24 к/с) — стандарт кино
 sc.render.use_motion_blur = not a.passes;   # со слоями AOV блюр делает пост по векторам движения
