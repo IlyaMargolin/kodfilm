@@ -58,6 +58,8 @@ jobs:
           echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }})"; exit 1; }
           mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
+          # ноутбук «закончил», но кадров нет (нет интернета у аккаунта, ошибка в коде) — это провал, а не успех
+          [ -f result/out/frames.mp4 ] || [ -f result/frames.mp4 ] || { grep -ohE 'ERROR[^"]*|Traceback[^"]*|NameResolutionError' result/*.log | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров (см. лог выше)"; exit 1; }
       - name: Save result to branch
         if: always()
         run: |
