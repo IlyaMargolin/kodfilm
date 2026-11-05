@@ -17,8 +17,10 @@ args = f"--script {job['script']} --out {OUT}/frames --w {job.get('w', 1920)} --
 if job.get('frames'): args += f" --frames {job['frames']}"
 if job.get('hero'): args += f" --hero {job['hero']}"
 if str(job.get('air', '')).strip() != '': args += f" --air {float(job['air'])}"
+# переключатели движка через окружение (например NOLAYER=1 — постановка камер без бонуса переднего плана, как в старых частях фильма)
+xenv = dict(kv.split('=', 1) for kv in str(job.get('env', '')).split() if '=' in kv and kv.split('=', 1)[0] in ('NOLAYER',))
 for k in range(n):
-    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(k))
+    env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(k), **xenv)
     procs.append(subprocess.Popen(f'cd {W} && {sys.executable} studio/film.py -- {args} --chunk {k} --chunks {n} > {OUT}/log_{k}.txt 2>&1', shell=True, env=env))
 for p in procs: p.wait()
 fr = sorted(glob.glob(f'{OUT}/frames/f_*.png'))

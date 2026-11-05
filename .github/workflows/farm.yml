@@ -10,8 +10,9 @@ on:
       hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
       part:    { description: 'Часть фильма (1, 2, 3…) для параллельных ноутбуков: своё имя ноутбука и ветки; кадры задать в frames', default: '' }
       air:     { description: 'Дымка по глубине (studio/depth.py): пусто = по стилю, 0 = выкл (для вклейки в фильм, снятый без неё)', default: '' }
+      env:     { description: 'Переключатели движка: NOLAYER=1 — камеры без бонуса переднего плана (для вклейки в фильм, снятый старой постановкой)', default: '' }
       wait:    { description: 'yes = держать машину GitHub до конца рендера (дорого: минуты Actions); пусто = отправить и выйти, забрать потом collect.yml', default: '' }
-      account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
+      account: { description: 'Аккаунт Kaggle, с которого начать: пусто = 1. Если у аккаунта кончилась квота GPU или заняты оба сеанса — берётся следующий (2, 3, … по кругу; секреты KAGGLE_API_TOKEN, KAGGLE_API_TOKEN_2…_8)', default: '' }
 
 permissions:
   contents: write
@@ -21,53 +22,69 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: ${{ github.event.inputs.wait == 'yes' && 350 || 20 }}
     env:
-      KAGGLE_API_TOKEN: ${{ github.event.inputs.account == '2' && secrets.KAGGLE_API_TOKEN_2 || secrets.KAGGLE_API_TOKEN }}
+      # пул аккаунтов: новый аккаунт = новый секрет KAGGLE_API_TOKEN_N (до 8), код менять не нужно; пустые слоты пропускаются
+      KT1: ${{ secrets.KAGGLE_API_TOKEN }}
+      KT2: ${{ secrets.KAGGLE_API_TOKEN_2 }}
+      KT3: ${{ secrets.KAGGLE_API_TOKEN_3 }}
+      KT4: ${{ secrets.KAGGLE_API_TOKEN_4 }}
+      KT5: ${{ secrets.KAGGLE_API_TOKEN_5 }}
+      KT6: ${{ secrets.KAGGLE_API_TOKEN_6 }}
+      KT7: ${{ secrets.KAGGLE_API_TOKEN_7 }}
+      KT8: ${{ secrets.KAGGLE_API_TOKEN_8 }}
+      KN: kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}
+      BR: results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}
     steps:
       - uses: actions/checkout@v4
       - run: pip install -q -U kaggle
-      - name: Pack job
+      - name: Pack and push (rotating accounts)
         id: me
         run: |
-          U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))")
-          echo "user=$U" >> $GITHUB_OUTPUT
           mkdir -p ds/assets && cp -r studio films ds/ && cp assets/fetch.sh ds/assets/
-          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}',hero='${{ github.event.inputs.hero }}',air='${{ github.event.inputs.air }}'),open('ds/farm.json','w'))"
-          D=kodfilm-farm-${{ github.run_number }}; echo "ds=$D" >> $GITHUB_OUTPUT
-          echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
-          # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром
-          for t in 1 2 3 4; do kaggle datasets create -p ds -r zip -q && break; echo "retry $t"; sleep $((t*20)); done
-          for i in $(seq 1 30); do kaggle datasets status $U/$D | tee /tmp/st; grep -qi ready /tmp/st && break; sleep 10; done
-          sleep 20
-      - name: Push GPU kernel
-        run: |
-          U=${{ steps.me.outputs.user }}
+          python3 -c "import json;json.dump(dict(script='${{ github.event.inputs.script }}',w=int('${{ github.event.inputs.width }}'),samples=int('${{ github.event.inputs.samples }}'),frames='${{ github.event.inputs.frames }}',hero='${{ github.event.inputs.hero }}',air='${{ github.event.inputs.air }}',env='${{ github.event.inputs.env }}'),open('ds/farm.json','w'))"
           mkdir -p kr && cp neural/farm.py kr/
-          cat > kr/kernel-metadata.json <<META
-          {"id":"$U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","title":"kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}","code_file":"farm.py","language":"python","kernel_type":"script",
-           "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/${{ steps.me.outputs.ds }}"]}
+          S0=${{ github.event.inputs.account || '1' }}
+          for k in 0 1 2 3 4 5 6 7; do
+            N=$(( (S0 - 1 + k) % 8 + 1 )); T=KT$N; [ -n "${!T}" ] || continue
+            export KAGGLE_API_TOKEN="${!T}"
+            U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))" 2>/dev/null) || { echo "аккаунт $N: токен не принят — следующий"; continue; }
+            echo "== аккаунт $N ($U)"
+            # свежий датасет на каждый запуск: новая версия старого датасета не успевает подхватиться ядром
+            D=kodfilm-farm-${{ github.run_number }}
+            echo "{\"title\":\"$D\",\"id\":\"$U/$D\",\"licenses\":[{\"name\":\"CC0-1.0\"}]}" > ds/dataset-metadata.json
+            for t in 1 2 3 4; do kaggle datasets create -p ds -r zip -q 2>&1 && break; echo "retry $t"; sleep $((t*20)); done
+            for i in $(seq 1 30); do kaggle datasets status $U/$D > /tmp/st 2>&1 || true; cat /tmp/st; grep -qi ready /tmp/st && break; sleep 10; done
+            sleep 20
+            cat > kr/kernel-metadata.json <<META
+          {"id":"$U/$KN","title":"$KN","code_file":"farm.py","language":"python","kernel_type":"script",
+           "is_private":true,"enable_gpu":true,"enable_internet":true,"machine_shape":"NvidiaTeslaT4","dataset_sources":["$U/$D"]}
           META
-          kaggle kernels push -p kr | tee /tmp/push.txt
-          # Kaggle отвечает кодом 0 и на отказ (например, «Maximum batch GPU session count of 2 reached») — ловим по тексту
-          if grep -qiE 'error|maximum' /tmp/push.txt; then echo "::error::Kaggle не принял ноутбук: $(cat /tmp/push.txt)"; exit 1; fi
+            kaggle kernels push -p kr > /tmp/push.txt 2>&1 || true; cat /tmp/push.txt
+            # Kaggle отвечает кодом 0 и на отказ — ловим по тексту. Квота или оба сеанса заняты — к следующему аккаунту
+            if grep -qiE 'maximum|quota|limit|exceed' /tmp/push.txt; then echo "аккаунт $N занят или без квоты — следующий"; continue; fi
+            if grep -qiE 'error|forbidden' /tmp/push.txt; then echo "::error::Kaggle не принял ноутбук (аккаунт $N): $(cat /tmp/push.txt)"; exit 1; fi
+            echo "user=$U" >> $GITHUB_OUTPUT; echo "acct=$N" >> $GITHUB_OUTPUT
+            echo "KAGGLE_API_TOKEN=${!T}" >> $GITHUB_ENV
+            exit 0
+          done
+          echo "::error::у всех аккаунтов Kaggle кончилась квота GPU или заняты сеансы: добавить аккаунт (секрет KAGGLE_API_TOKEN_N) или дождаться сброса квоты (суббота)"; exit 1
       - name: How to collect
         if: github.event.inputs.wait != 'yes'
         run: |
-          # минуты GitHub Actions платные для приватного репо: не держим машину 5 часов ради ожидания Kaggle
-          K=kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}
-          echo "::notice::рендер отправлен на Kaggle ($K). Забрать: gh workflow run collect.yml -f kernel=$K -f branch=results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} -f account=${{ github.event.inputs.account }}"
+          # не держим машину GitHub часами ради ожидания Kaggle: отправили и вышли, забираем collect.yml
+          echo "::notice::рендер отправлен на Kaggle: аккаунт ${{ steps.me.outputs.acct }}, ноутбук $KN. Забрать: collect.yml -f kernel=$KN -f branch=$BR -f account=${{ steps.me.outputs.acct }}"
       - name: Wait for render
         if: github.event.inputs.wait == 'yes'
         run: |
           U=${{ steps.me.outputs.user }}
           sleep 60
           for i in $(seq 1 330); do
-            S=$(kaggle kernels status $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} 2>&1); echo "$(date +%T) $S"
+            S=$(kaggle kernels status $U/$KN 2>&1); echo "$(date +%T) $S"
             echo "$S" | grep -qiE 'complete|error|cancel' && break; sleep 60
           done
           # Kaggle даёт ноутбуку до 12 ч, а задание GitHub живёт ≤ 6 ч: если рендер ещё идёт — честно падаем,
           # результат потом забирает collect.yml (иначе «зелёный» запуск без кадров выглядит как успех)
-          echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }})"; exit 1; }
-          mkdir -p result && kaggle kernels output $U/kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} -p result || true
+          echo "$S" | grep -qi 'complete' || { echo "::error::рендер на Kaggle ещё не закончен: забрать позже через collect.yml (kernel $KN)"; exit 1; }
+          mkdir -p result && kaggle kernels output $U/$KN -p result || true
           ls -laR result | head -30; tail -60 result/*.log 2>/dev/null || true
           # ноутбук «закончил», но кадров нет (нет интернета у аккаунта, ошибка в коде) — это провал, а не успех
           [ -f result/out/frames.mp4 ] || [ -f result/frames.mp4 ] || { grep -ohE 'ERROR[^"]*|Traceback[^"]*|NameResolutionError' result/*.log | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров (см. лог выше)"; exit 1; }
@@ -76,7 +93,7 @@ jobs:
         run: |
           cd result && rm -f *.log && git init -q && git checkout -q -b results-farm && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
-          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} || echo "nothing to save"
+          git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/$BR || echo "nothing to save"
       - uses: actions/upload-artifact@v4
         if: always() && github.event.inputs.wait == 'yes'
         with: { name: farm-render, path: result/, retention-days: 14 }
