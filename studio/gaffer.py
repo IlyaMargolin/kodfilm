@@ -93,11 +93,13 @@ class ShotLights:
 BOKEH = {'ECU': 0.03, 'CU': 0.025, 'MCU': 0.018, 'MS': 0.011, 'FS': 0.006}   # по кадрам-образцам: фон за лицом — пятна
 DOF_MIN = {'ECU': 0.03, 'CU': 0.06, 'MCU': 0.10, 'MS': 0.25, 'FS': 0.6}   # м: оба глаза и нос в зоне резкости
 
-def fstop_for(size, lens_mm, sensor_w_mm, focus_m, bg_m, cur, coc_frac=1 / 1500):
-    """Самая закрытая диафрагма, при которой фон ещё размыт на BOKEH[size] кадра, но не меньше нужной глубины на лице."""
-    if size not in BOKEH: return cur
+def fstop_for(size, lens_mm, sensor_w_mm, focus_m, bg_m, cur, coc_frac=1 / 1500, blur=1.0):
+    """Самая закрытая диафрагма, при которой фон ещё размыт на BOKEH[size] кадра, но не меньше нужной глубины на лице.
+    blur — множитель стиля (look.optics.dof): 1.2 = фон размыт на 20% сильнее; глубина на лице всё равно гарантирована."""
+    cur = cur / blur
+    if size not in BOKEH: return round(max(1.4, cur), 1)
     f = lens_mm; s = max(focus_m * 1000, f * 1.5); d = max(bg_m * 1000, s + 1)
-    n_b = f * f * (d - s) / (d * (s - f) * BOKEH[size] * sensor_w_mm)       # размытие фона ∝ 1/N
+    n_b = f * f * (d - s) / (d * (s - f) * BOKEH[size] * blur * sensor_w_mm)       # размытие фона ∝ 1/N
     c = sensor_w_mm * coc_frac
     n_dof = DOF_MIN[size] * 1000 * f * f / (2 * c * s * s)                   # глубина ≈ 2·N·c·s²/f²
     return round(max(1.4, n_dof, min(n_b, cur)), 1)

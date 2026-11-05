@@ -20,6 +20,8 @@ ap.add_argument('--passes', action='store_true', help='слои AOV: EXR (глу
 ap.add_argument('--hero', default=None, help='заменить актёра главной роли (id из studio/cast/actors), например pilgrim')
 ap.add_argument('--save', default=None, help='сохранить сцену .blend (проверка постановки)')
 ap.add_argument('--resume', action='store_true', help='пропускать кадры, PNG которых уже есть (продолжить оборванный рендер)')
+ap.add_argument('--look', default=None, help='пульт стиля (studio/look.py): пресет кино|pixar|нуар|неон|тун или путь к look.json; иначе ВИД: из сценария')
+ap.add_argument('--air', type=float, default=1.0, help='воздушная перспектива по глубине рендера (studio/depth.py): множитель силы, 0 — выкл')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
@@ -41,10 +43,18 @@ if scn.style and a.lens == 'cinema':   # СТИЛЬ: из сценария — l
 if a.lens.endswith('.json'):
     LOOK = json.load(open(a.lens, encoding='utf-8')); LOOK['_dir'] = os.path.dirname(os.path.abspath(a.lens))
     a.lens = LOOK.get('lens', 'cinema'); a.passes = a.passes or LOOK.get('passes', False)
+import look as lookmod   # пульт стиля: все инструменты ядра из одного словаря
+LK = lookmod.load(a.look or scn.look or None, lookmod.from_words(scn.look_words))
+if a.lens == 'cinema' and not LOOK: a.lens = LK['optics']['lens']
+a.air *= LK['air']['depth']
+if LK['color']['palette']: scn.palette = LK['color']['palette']
+print('вид:', a.look or scn.look or 'кино', {k: v for k, v in LK.items() if v != lookmod.DEFAULT[k]}, flush=True)
 if a.lens != 'none':
     import lens; lens.setup(sc, a.lens)
 import palette
 if a.lens != 'none': palette.setup(sc)      # грейд по палитре кадра (после линзы)
+import depth
+if a.lens != 'none' and a.air > 0: depth.setup(sc, far=depth.FAR.get(scn.world, 60.0))   # объём: дымка по точной глубине рендера, перед грейдом
 if a.passes:
     import lens; lens.passes(sc, a.out)
 if scn.world == 'sponza': world.set_sponza()
@@ -52,7 +62,7 @@ world.hdri(scn.sky[0], scn.sky[1])
 sun = world.sun(scn.sun[0], scn.sun[1], scn.sun[2] if len(scn.sun) > 2 else 6)
 from crew import profile as _cp
 HAZE = 0.6 + 0.5 * _cp(scn.director, getattr(scn, 'dp', None))['light'].get('haze', 0.8)   # дымка — инструмент оператора: контровой становится лучами
-fogobj = world.fog(scn.fog * HAZE * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
+fogobj = world.fog(scn.fog * HAZE * LK['air']['fog'] * (a.fogk if a.engine == 'cycles' else 1.0), size=(40, 24, 16)) if scn.fog > 0 else None
 
 # ---------- постановка героя ----------
 import cast
@@ -274,6 +284,7 @@ def framing(pos, P, lens, scr=(0.0, 0.0)):
     return hero / max(1, hn), lft / max(1, nl), rgt / max(1, nr)
 
 ALLOW_OCC = {'EWS': 0.3, 'WS': 0.22, 'FS': 0.15}     # на общих арки по краям — рамка кадра; на крупных — брак
+LAYER = {} if os.environ.get('NOLAYER') else {'EWS': 0.3, 'WS': 0.3, 'FS': 0.25, 'MS': 0.2}   # три плана в кадре: премия за передний план у края на общих и средних
 
 BOUNDS = dict(sponza=((-10.8, 9.8), (-4.4, 4.8), (0.15, 9.0))).get(scn.world)
 def clamp(v):
@@ -291,11 +302,16 @@ def subject(f, target):
 
 import gaffer
 from crew import profile as _crew_profile
-LIGHT = _crew_profile(scn.director, getattr(scn, 'dp', None))['light']
+LIGHT = lookmod.light(_crew_profile(scn.director, getattr(scn, 'dp', None))['light'], LK)   # профиль оператора + схема света стиля
 SUN_DIR = sun.matrix_world.to_quaternion() @ Vector((0, 0, 1))
 # свет плана ложится только на актёра: тело, одежда, волосы (всё, что ведёт скелет героя)
 RECEIVERS = [o for o in sc.objects if o.type == 'MESH' and (o.parent == hero.arm or any(m.type == 'ARMATURE' and m.object == hero.arm for m in o.modifiers))]
 if fogobj: fogobj.hide_viewport = True   # туман не должен мешать проверке «камера в стене»
+import materials   # пульт стиля: фаски и износ на декорации и реквизите (актёр не трогается)
+materials.apply(LK, [o_ for o_ in sc.objects if o_ not in RECEIVERS])
+if LK['neon']['on']:   # пульт стиля: неоновые трубки на стенах вокруг действия (видимые практики, светят цветом)
+    import neon
+    neon.place(sc, sum((p_['rootS'] for p_ in track_pts), Vector()) / len(track_pts), LK['neon']['colors'], LK['neon']['count'], LK['neon']['strength'])
 cams = []
 for si, sh in enumerate(shots):
     cd = bpy.data.cameras.new(f'shot{si:02d}'); cd.lens = sh.lens; cd.sensor_width = SENSOR_W; cd.sensor_fit = 'HORIZONTAL'
@@ -376,11 +392,14 @@ for si, sh in enumerate(shots):
                     bon += min(edge, 0.35) - max(0.0, max(el_, er_) - 0.55)
                 else:
                     oc = occlusion(q, Pq, sh.lens, scr); good += 1; pen += max(0.0, oc - allow) * 3
+                    if sh.size in LAYER:   # объём: мягкий передний план у края (колонна, арка) — слабая премия, ракурс режиссёра важнее
+                        hc, el_, er_ = framing(q, Pq, sh.lens, scr); pen += hc * 6
+                        bon += LAYER[sh.size] * min(max(el_, er_), 0.3) - max(0.0, max(el_, er_) - 0.45)
             ok = good - pen + 1.5 * bon
             sc_ = ok / len(fs) - 0.002 * abs(o) - 0.05 * (1 - kd) - 0.004 * abs(de)
             if os.environ.get('CAMDBG') == str(si): print('try', o, kd, de, 'good', good, '/', len(fs), 'pen', round(pen, 2), 'score', round(sc_, 3))
             if sc_ > best[0]: best = (sc_, o, kd, de)
-            if good == len(fs) and pen == 0 and (not FG or bon / len(fs) > 0.15): break
+            if good == len(fs) and pen == 0 and (bon / len(fs) > (0.15 if FG else 0.05) or (not FG and sh.size not in LAYER)): break
         _, az_fix, kd_fix, de_fix = best
     else:
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
@@ -462,6 +481,18 @@ for si, sh in enumerate(shots):
                     k_ = sh.lens / SENSOR_W / -v_.z
                     sh.qc = dict(face=[round(0.5 + v_.x * k_, 3), round(0.5 - v_.y * k_ * a.w / a.h, 3)],
                                  face_r=round(0.11 * k_, 3), eye_m=round((fpt - cam.location).length, 2))
+            # силуэт героя на экране (для правила объёма: герой не должен сливаться с фоном)
+            if not sh.poi and not sh.pov:
+                R_ = cam.rotation_euler.to_matrix(); pe_ = track_pts[min(max(f, 1), TOTAL) - 1]
+                pts_ = [pe_['headS'] + Vector((0, 0, 0.14)), (pe_['fl'] + pe_['fr']) / 2]
+                scr_ = []
+                for q_ in pts_:
+                    v_ = R_.transposed() @ (q_ - cam.location)
+                    if v_.z < -0.05: k_ = sh.lens / SENSOR_W / -v_.z; scr_.append((0.5 + v_.x * k_, 0.5 - v_.y * k_ * a.w / a.h, k_))
+                if len(scr_) == 2:
+                    (xh, yh, kh), (xf, yf, kf) = scr_; hw_ = 0.24 * max(kh, kf)   # полуширина плеч ≈ 0.24 м
+                    sh.qc = getattr(sh, 'qc', None) or {}
+                    sh.qc['body'] = [round(min(xh, xf) - hw_, 3), round(min(yh, yf), 3), round(max(xh, xf) + hw_, 3), round(max(yh, yf), 3)]
         if not sh.poi and not sh.pov and KEY:
             gl.place(f, subject(f, 'head'), cam.location, fwd, SUN_DIR)
     # диафрагма по фону (как у оператора с рулеткой): фон размыт на заданную долю кадра, лицо целиком в резкости
@@ -470,7 +501,7 @@ for si, sh in enumerate(shots):
         dg = dg or bpy.context.evaluated_depsgraph_get()
         hit = sc.ray_cast(dg, fpos + dvn * 0.6, dvn, distance=200)
         bg = (sdist + 0.6 + (hit[1] - (fpos + dvn * 0.6)).length) if hit[0] else 60.0
-        nf = gaffer.fstop_for(sh.size, sh.lens, SENSOR_W, sdist, bg, sh.fstop)
+        nf = gaffer.fstop_for(sh.size, sh.lens, SENSOR_W, sdist, bg, sh.fstop, blur=LK['optics']['dof'])
         if nf != sh.fstop: print(f'  диафрагма {sh.fstop:.1f} → {nf:.1f} (фокус {sdist:.2f} м, фон {bg:.1f} м)', flush=True)
         sh.fstop = nf; cd.dof.aperture_fstop = nf
         if getattr(sh, 'qc', None): sh.qc['focus_m'] = round(sdist, 2)
@@ -517,7 +548,7 @@ json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
                shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None), qc=getattr(s, 'qc', None)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
-               director=scn.director, title=scn.title), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
+               director=scn.director, title=scn.title, look=LK), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
 if a.save: bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a.save))
 # ---------- рендер ----------
@@ -563,6 +594,9 @@ for f in frames:
         ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
         sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th
     palette.apply(sc, shots[ci].palette)
+    depth.apply(sc, shots[ci].palette, size_, a.air * HAZE)
+    if LK['color']['sat'] != 1.0 and sc.compositing_node_group and 'grade_sat' in sc.compositing_node_group.nodes:
+        sc.compositing_node_group.nodes['grade_sat'].inputs['Saturation'].default_value *= LK['color']['sat']
     sc.camera = cam; sc.frame_set(fi, subframe=fr)
     sc.render.filepath = os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png')
     bpy.ops.render.render(write_still=True); print('frame', f, cam.name, flush=True)

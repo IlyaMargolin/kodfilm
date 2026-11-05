@@ -53,6 +53,8 @@ class Scene:
     composer: str = None
     palette: str = ''   # ведущая палитра сцены (studio/palette.py), пусто — по небу
     style: str = ''     # «restyle/neon»: стиль из style.json стилевого репозитория (studio/styles.py)
+    look: str = ''      # ВИД: пресет пульта стиля (studio/look.py: кино, pixar, нуар, неон, тун) или путь к look.json
+    look_words: list = field(default_factory=list)   # СВЕТ/ДЫМКА/ОБЪЁМ/НЕОН/... — правки пульта на сцену
     beats: list = field(default_factory=list)
 
 def _pt(s): x, y = s.split(','); return (float(x), float(y))
@@ -76,6 +78,9 @@ def parse(text):
             elif k == 'КОМПОЗИТОР': sc.composer = v.lower()
             elif k == 'СТИЛЬ': sc.style = v.lower()
             elif k == 'ПАЛИТРА': sc.palette = v.lower()
+            elif k == 'ВИД': sc.look = v.lower() if not v.endswith('.json') else v
+            elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'ВИНЬЕТКА', 'ОПТИКА'):
+                sc.look_words.append(('ОБЪЁМ' if k == 'ОБЪЕМ' else k, v.lower() if k in ('СВЕТ', 'ОПТИКА') else v))
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)
         if not m: continue

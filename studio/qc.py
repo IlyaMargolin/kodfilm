@@ -3,7 +3,8 @@
 #   focus   — диафрагма посчитана не для того расстояния (фокус «уезжал» на 13 м вместо 2: лицо мягкое, фон резкий);
 #   face    — лицо в тени (поля капюшона, ключ «из-за плеча»): на крупном плане лицо должно быть светлее кадра;
 #   cast    — тени перекрашены грейдом (бирюзовые тени: красный канал в тенях обнулён);
-#   palette — пятен цвета больше, чем 3–4 цвета палитры: кадр «пёстрый», смысл цвета теряется.
+#   palette — пятен цвета больше, чем 3–4 цвета палитры: кадр «пёстрый», смысл цвета теряется;
+#   depth   — герой сливается с фоном (ни яркостью, ни цветом не отделён): кадр плоский, объёма нет.
 # python studio/qc.py out/<раскадровка>   → таблица по кадрам, qc.json рядом, код выхода 1 при ошибках
 import sys, os, json, glob, subprocess
 import numpy as np
@@ -43,6 +44,30 @@ def color_spots(img, k=8, it=12, min_area=0.04, chroma_min=0.06, seed=3):
         if all(min(abs(hdeg - h0), 360 - abs(hdeg - h0)) > 25 for h0 in hues): hues.append(hdeg)
     return len(hues), [round(float(h)) for h in hues]
 
+def separation(img, box):
+    """Насколько герой отделён от фона: середина силуэта против полос фона слева и справа от него.
+    Возвращает (контраст яркости относительный, разница цвета) или None, если мерить нечем (герой во весь кадр)."""
+    L = luma(img); H, W = L.shape
+    x0, y0, x1, y1 = box; bw = x1 - x0
+    if bw <= 0 or bw > 0.7 or y1 - y0 < 0.08: return None
+    ya, yb = max(0.0, y0 + 0.15 * (y1 - y0)), min(1.0, y0 + 0.75 * (y1 - y0))
+    if yb - ya < 0.05: return None
+    cx = (x0 + x1) / 2
+    def reg(a, b):
+        a, b = max(0.0, a), min(1.0, b)
+        if b - a < 0.01: return None
+        return img[int(ya * H):int(yb * H), int(a * W):int(b * W)].reshape(-1, 3)
+    core = reg(cx - 0.2 * bw, cx + 0.2 * bw)
+    ring = [r for r in (reg(x0 - 0.6 * bw, x0 - 0.05 * bw), reg(x1 + 0.05 * bw, x1 + 0.6 * bw)) if r is not None and len(r) > 20]
+    if core is None or len(core) < 20 or not ring: return None
+    bg = np.concatenate(ring); lw = np.array([0.2126, 0.7152, 0.0722], np.float32)
+    ls, lb = float(np.median(core @ lw)), float(np.median(bg @ lw))
+    rel = abs(ls - lb) / max(0.05, (ls + lb) / 2)
+    cs, cb = core.mean(0) - core.mean(), bg.mean(0) - bg.mean()
+    return rel, float(np.linalg.norm(cs - cb))
+
+SEP_L, SEP_C = 0.15, 0.04      # порог отделения героя: относительный контраст яркости и разница цветности
+
 def check(img, shot, fps=24):
     out = []; L = luma(img); H, W = L.shape
     q = (shot or {}).get('qc') or {}
@@ -63,9 +88,12 @@ def check(img, shot, fps=24):
         m = dark.mean(0); spread = float(m.max() - m.min()); base = float(m.mean())
         if base > 0.01 and spread / max(base, 0.02) > 1.6 and spread > 0.06:
             out.append(('cast', f'тени окрашены: RGB теней {np.round(m, 2).tolist()}'))
+    sep = separation(img, q['body']) if q.get('body') else None
+    if sep and sep[0] < SEP_L and sep[1] < SEP_C:
+        out.append(('depth', f'герой сливается с фоном: контраст {sep[0]:.2f}, разница цвета {sep[1]:.3f}'))
     n, hues = color_spots(img)
     if n > 4: out.append(('palette', f'{n} цветовых пятен (оттенки {hues}), а палитра держит 3–4'))
-    return out, dict(spots=n, hues=hues)
+    return out, dict(spots=n, hues=hues, sep=sep and [round(sep[0], 3), round(sep[1], 3)])
 
 def main(d):
     meta = json.load(open(os.path.join(d, 'meta.json'))); fps = meta.get('fps', 24)
