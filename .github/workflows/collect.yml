@@ -19,6 +19,11 @@ jobs:
           S=$(kaggle kernels status $U/${{ github.event.inputs.kernel }} 2>&1); echo "$S"
           echo "$S" | grep -qi 'complete' || { echo "::error::ноутбук ещё не закончил: вывод был бы от прошлой версии"; exit 1; }
           mkdir -p result && kaggle kernels output $U/${{ github.event.inputs.kernel }} -p result
+          ls -la result result/out 2>/dev/null | head -20
+          # ферма: ноутбук «закончил», но кадров нет — провал (лог в выводе выше), а не пустая «успешная» ветка
+          if [ -f result/farm.py ] || ls result/out/log_*.txt >/dev/null 2>&1; then
+            [ -f result/out/frames.mp4 ] || { grep -ohE 'ERROR[^"]*|Traceback[^"]*' result/out/*.txt 2>/dev/null | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров"; exit 1; }
+          fi
           cd result && rm -f *.log && git init -q && git checkout -q -b B && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
           git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git B:${{ github.event.inputs.branch }}

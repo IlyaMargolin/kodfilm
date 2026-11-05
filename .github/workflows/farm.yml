@@ -10,6 +10,7 @@ on:
       hero:    { description: 'Актёр главной роли (id), пусто = как в касте фильма', default: '' }
       part:    { description: 'Часть фильма (1, 2, 3…) для параллельных ноутбуков: своё имя ноутбука и ветки; кадры задать в frames', default: '' }
       air:     { description: 'Дымка по глубине (studio/depth.py): пусто = по стилю, 0 = выкл (для вклейки в фильм, снятый без неё)', default: '' }
+      wait:    { description: 'yes = держать машину GitHub до конца рендера (дорого: минуты Actions); пусто = отправить и выйти, забрать потом collect.yml', default: '' }
       account: { description: 'Аккаунт Kaggle: пусто = основной (KAGGLE_API_TOKEN), 2 = второй (KAGGLE_API_TOKEN_2)', default: '' }
 
 permissions:
@@ -18,7 +19,7 @@ permissions:
 jobs:
   farm:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: ${{ github.event.inputs.wait == 'yes' && 350 || 20 }}
     env:
       KAGGLE_API_TOKEN: ${{ github.event.inputs.account == '2' && secrets.KAGGLE_API_TOKEN_2 || secrets.KAGGLE_API_TOKEN }}
     steps:
@@ -48,7 +49,14 @@ jobs:
           kaggle kernels push -p kr | tee /tmp/push.txt
           # Kaggle отвечает кодом 0 и на отказ (например, «Maximum batch GPU session count of 2 reached») — ловим по тексту
           if grep -qiE 'error|maximum' /tmp/push.txt; then echo "::error::Kaggle не принял ноутбук: $(cat /tmp/push.txt)"; exit 1; fi
+      - name: How to collect
+        if: github.event.inputs.wait != 'yes'
+        run: |
+          # минуты GitHub Actions платные для приватного репо: не держим машину 5 часов ради ожидания Kaggle
+          K=kodfilm-farm-run${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }}
+          echo "::notice::рендер отправлен на Kaggle ($K). Забрать: gh workflow run collect.yml -f kernel=$K -f branch=results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} -f account=${{ github.event.inputs.account }}"
       - name: Wait for render
+        if: github.event.inputs.wait == 'yes'
         run: |
           U=${{ steps.me.outputs.user }}
           sleep 60
@@ -64,11 +72,11 @@ jobs:
           # ноутбук «закончил», но кадров нет (нет интернета у аккаунта, ошибка в коде) — это провал, а не успех
           [ -f result/out/frames.mp4 ] || [ -f result/frames.mp4 ] || { grep -ohE 'ERROR[^"]*|Traceback[^"]*|NameResolutionError' result/*.log | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров (см. лог выше)"; exit 1; }
       - name: Save result to branch
-        if: always()
+        if: always() && github.event.inputs.wait == 'yes'
         run: |
           cd result && rm -f *.log && git init -q && git checkout -q -b results-farm && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
           git push -q -f https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git HEAD:refs/heads/results-farm${{ github.event.inputs.hero && '-' || '' }}${{ github.event.inputs.hero }}${{ github.event.inputs.part && '-p' || '' }}${{ github.event.inputs.part }} || echo "nothing to save"
       - uses: actions/upload-artifact@v4
-        if: always()
+        if: always() && github.event.inputs.wait == 'yes'
         with: { name: farm-render, path: result/, retention-days: 14 }
