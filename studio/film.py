@@ -19,6 +19,7 @@ ap.add_argument('--ev', type=float, default=None, help='экспозиция; в
 ap.add_argument('--passes', action='store_true', help='слои AOV: EXR (глубина, туман, нормали) + 16-бит PNG глубины')
 ap.add_argument('--hero', default=None, help='заменить актёра главной роли (id из studio/cast/actors), например pilgrim')
 ap.add_argument('--save', default=None, help='сохранить сцену .blend (проверка постановки)')
+ap.add_argument('--resume', action='store_true', help='пропускать кадры, PNG которых уже есть (продолжить оборванный рендер)')
 ap.add_argument('--lens', default='cinema', help='clean|cinema|anamorphic|dream|none — блум, анаморфные блики, аберрация')
 a = ap.parse_args(sys.argv[sys.argv.index('--') + 1:] if '--' in sys.argv else sys.argv[1:])
 FPS = a.fps
@@ -527,6 +528,9 @@ elif a.frames == 'none': frames = []
 elif a.frames == 'all': frames = list(range(1, TOTAL_OUT + 1))
 elif '-' in a.frames: s0, s1 = map(int, a.frames.split('-')); frames = list(range(s0, min(TOTAL_OUT, s1) + 1))
 else: frames = [int(x) for x in a.frames.split(',')]
+if a.resume:   # Colab/ферма оборвали сеанс: досчитываем только недостающие кадры
+    _n0 = len(frames); frames = [f for f in frames if not os.path.exists(os.path.join(os.path.abspath(a.out), f'f_{f:05d}.png'))]
+    print('resume: осталось', len(frames), 'из', _n0, 'кадров', flush=True)
 per = math.ceil(len(frames) / a.chunks); frames = frames[a.chunk * per:(a.chunk + 1) * per]
 # бюджет сэмплов по крупности: лицо на крупном — никогда не «мыло» (больше лучей, строже адаптивный порог);
 # общий план — фигура мелкая, шум прячет денойзер, время экономим (правило «где можно мягко»)
