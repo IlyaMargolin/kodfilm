@@ -538,6 +538,12 @@ HAIR_K = {'ECU': 1.0, 'CU': 1.0, 'MCU': 0.85, 'MS': 0.6, 'FS': 0.35, 'WS': 0.2, 
 SUBD = {'ECU': 2, 'CU': 2, 'MCU': 2, 'MS': 2, 'FS': 1, 'WS': 1, 'EWS': 1}
 psets = {ps.settings: (ps.settings.rendered_child_count, ps.settings.radius_scale) for o in sc.objects if o.type == 'MESH' for ps in o.particle_systems}
 subs = [(m, m.render_levels) for o in sc.objects if o.type == 'MESH' and o.particle_systems for m in o.modifiers if m.type == 'SUBSURF']
+# замер (Cycles, 480 px): волосы — 70–80% времени кадра даже там, где героя почти не видно: 27 тыс. корней × 10 детей
+# пересобираются в BVH каждый кадр на CPU, и GPU этого не ускоряет. На общих и вставках тонкие системы (скальп, брови,
+# усы) меньше пикселя — их выключаем; борода остаётся тёмной массой лица. Без героя в кадре (вставка) волосы не нужны вовсе
+FINE_HAIR = {'scalp', 'hairline', 'brow_l', 'brow_r', 'moustache_l', 'moustache_r'}
+HAIR_SHOW = {'EWS': {'beard'}, 'WS': {'beard'}, 'INS': set()}
+hair_mods = [(m, m.particle_system.settings.name) for o in sc.objects if o.type == 'MESH' for m in o.modifiers if m.type == 'PARTICLE_SYSTEM']
 for f in frames:
     sf = OUT[min(f, TOTAL_OUT) - 1]; fi = int(sf); fr = sf - fi
     ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= sf <= f1), len(cams) - 1); cam = cams[ci][2]
@@ -547,6 +553,8 @@ for f in frames:
         k_ = HAIR_K.get(size_, 1.0); st_.rendered_child_count = max(2, int(round(n_ * k_))); st_.radius_scale = w_ * min(3.0, 1.0 / k_)
         if a.engine != 'cycles': groom.eevee_hair(st_)
     for m_, lv in subs: m_.render_levels = min(lv, SUBD.get(size_, lv))
+    hs_ = HAIR_SHOW.get('INS' if shots[ci].poi or shots[ci].size == 'INS' else shots[ci].size)
+    for m_, nm_ in hair_mods: m_.show_render = hs_ is None or nm_ in hs_
     if base_s:
         ks, th = QS.get(shots[ci].size, (1.0, 0.01)) if not shots[ci].poi else (1.2, 0.008)
         sc.cycles.samples = max(16, int(base_s * ks)); sc.cycles.adaptive_threshold = th

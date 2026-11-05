@@ -148,7 +148,7 @@ def _system(ob, name, group, mat_index, count, length, children, width, align, c
     a = Vector(align); k = length / 4.0 / (0.85 * (1.0 + a.length))   # в Blender длина = 4·|скорость|; нормаль на голове смотрит куда угодно
     st.normal_factor = k; st.object_align_factor = tuple(a * k)
     st.factor_random = k * rnd      # каждый волос чуть в свою сторону: без этого пряди ложатся «черепицей» рядами
-    st.hair_step = 6; st.display_step = 3; st.render_step = 5
+    st.hair_step = 6; st.display_step = 3; st.render_step = 3
     st.child_type = 'INTERPOLATED'; st.child_percent = 2; st.rendered_child_count = children
     st.virtual_parents = 0.0
     st.child_length = 1.0; st.child_length_threshold = 0.35           # треть детей короче — естественная неровность
@@ -181,7 +181,19 @@ def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0
     # скальп: зачёс назад. Толщина пряди — «рендерная», не анатомическая: волос 70 мкм на крупном плане 1080p = 0.1 пикселя,
     # он мерцает шумом и шумодав превращает его в мазню. Студии рендерят 0.2–0.3 мм и меньше кривых: каждая пиксель-стабильна
     # (14 тыс. корней × 9 детей ≈ 140 тыс. кривых — как живая шевелюра по плотности покрытия)
-    ss = _system(ob, 'scalp', scalp, mi, int(14000 * density), L, 9, 0.0002, (0, -0.95, -0.45), 0.35, 0.0014, rnd=0.08)
+    sk = 1.0
+    if hooded:
+        # под капюшоном видна только передняя кромка волос в проёме: макушку и затылок не растим. Замер: волосы —
+        # 70–80% времени кадра в Cycles; число корней уменьшаем в той же доле, что и площадь, — густота спереди та же
+        E_, X_, Y_, Z_ = _frame(ob); before = after = 0.0
+        for v in ob.data.vertices:
+            w = next((g.weight for g in v.groups if g.group == scalp.index), 0.0)
+            if w <= 0: continue
+            k = _sm((v.co - E_).dot(Y_), -0.12, -0.085); before += w; after += w * k
+            if k < 1.0: scalp.add([v.index], w * k, 'REPLACE')
+        sk = max(0.15, after / before) if before > 0 else 1.0
+        print('groom: под капюшоном скальп', round(sk * 100), '% корней', flush=True)
+    ss = _system(ob, 'scalp', scalp, mi, int(14000 * density * sk), L, 9, 0.0002, (0, -0.95, -0.45), 0.35, 0.0014, rnd=0.08)
     ss.vertex_group_length = 'scalp_len'
     _system(ob, 'hairline', ob.vertex_groups['hairline'], mi, int(2500 * density), L * 0.8, 9, 0.0002, (0, -1.4, -0.35), 0.3, 0.0012, rnd=0.06)
     # брови прядями: короткие (8–10 мм) жёсткие волоски, у переносицы вверх, дальше — к виску, прижаты к коже.
