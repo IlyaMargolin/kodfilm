@@ -485,6 +485,9 @@ for si, sh in enumerate(shots):
                     q = Vector((math.cos(pit2) * math.cos(yaw_d), math.cos(pit2) * math.sin(yaw_d), math.sin(pit2))).to_track_quat('-Z', 'Y')
         cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
         if KEY: cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
+        if KEY and ((f - f0) % 6 == 0 or f == f1):   # для вида сверху на раскадровке: где камера и куда смотрит
+            fw_m = cam.rotation_euler.to_matrix() @ Vector((0, 0, -1))
+            sh.cam_path = (getattr(sh, 'cam_path', None) or []) + [[round(cam.location.x, 2), round(cam.location.y, 2), round(cam.location.z, 2), round(fw_m.x, 3), round(fw_m.y, 3)]]
         # фокус: на глаза для портретных планов, на грудь для общих, на объект во вставке
         # портрет: резкость на ближний к камере глаз (не центр черепа: на 85 мм f/2.8 9 см до глаз = «мыло» лица)
         if sh.poi: fpt = P
@@ -572,7 +575,7 @@ for sh in shots: sh.start, sh.end = src2out(sh.start), src2out(sh.end)
 os.makedirs(a.out, exist_ok=True)
 json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for c in p['fr'])] for p in track_pts], fps=FPS, frames=TOTAL_OUT, duration=TOTAL_OUT / FPS, steps=steps,
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
-               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None), qc=getattr(s, 'qc', None)) for s in shots],
+               shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None), qc=getattr(s, 'qc', None), cam=getattr(s, 'cam_path', None)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
                director=scn.director, title=scn.title, look=LK), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
