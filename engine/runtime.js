@@ -7,6 +7,9 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { FilmGrade } from './grade.js';
+import { Pass, FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { CopyShader } from 'three/addons/shaders/CopyShader.js';
+import { makeAccum } from './accum.js';
 
 const params = new URLSearchParams(location.search);
 const W = +params.get('w') || 1280, H = +params.get('h') || 720;
@@ -58,8 +61,22 @@ const camera = new THREE.PerspectiveCamera(35, W / H, 0.05, 500);
 const ctx = { THREE, scene, camera, renderer, W, H, rand: mulberry32(film.seed ?? 1) };
 const shot = await film.build(ctx);
 
+// Затвор с подкадрами (engine/lens.js, engine/accum.js): если план отдаёт subframes(t) → { n, pose },
+// кадр собирается из n рендеров внутри открытого затвора (размытие движения, глубина резкости, сглаживание).
+class AccumPass extends Pass {
+  constructor(accum) {
+    super(); this.accum = accum; this.job = {}; this.needsSwap = false;
+    const u = THREE.UniformsUtils.clone(CopyShader.uniforms); u.tDiffuse.value = accum.texture;
+    this.fsq = new FullScreenQuad(new THREE.ShaderMaterial({ uniforms: u, vertexShader: CopyShader.vertexShader, fragmentShader: CopyShader.fragmentShader }));
+  }
+  render(renderer, writeBuffer, readBuffer) {
+    this.accum.render(renderer, scene, camera, this.job);
+    renderer.setRenderTarget(this.renderToScreen ? null : readBuffer); this.fsq.render(renderer);
+  }
+}
+const accumPass = shot.subframes ? new AccumPass(makeAccum(THREE, { W, H })) : null;
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
+composer.addPass(accumPass ?? new RenderPass(scene, camera));
 const bloom = new UnrealBloomPass(new THREE.Vector2(W, H), film.bloom?.strength ?? 1.1, film.bloom?.radius ?? 0.6, film.bloom?.threshold ?? 0.15);
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
@@ -70,6 +87,7 @@ window.__meta = { fps: film.fps, duration: film.duration, frames: Math.round(fil
 window.__frame = (i) => {
   const t = i / film.fps;
   shot.update(t);
+  if (accumPass) accumPass.job = shot.subframes(t);
   grade.uniforms.uTime.value = i;
   grade.uniforms.uFade.value = film.fade ? film.fade(t) : 1;
   composer.render();

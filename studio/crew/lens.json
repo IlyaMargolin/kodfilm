@@ -1,0 +1,12 @@
+{
+  "_": "Правила объектива и затвора, общие для Blender-ядра (studio/gaffer.py, studio/film.py) и JS-движка (engine/lens.js). Числа меняются только здесь.",
+  "sensor_w_mm": 24.89,
+  "sensor_h_mm": 14.0,
+  "coc_frac": 0.000667,
+  "bokeh": { "ECU": 0.03, "CU": 0.025, "MCU": 0.018, "MS": 0.011, "FS": 0.006 },
+  "dof_min": { "ECU": 0.03, "CU": 0.06, "MCU": 0.10, "MS": 0.25, "FS": 0.6 },
+  "fstop_default": 2.8,
+  "shutter_deg": 180,
+  "subframes": { "min": 16, "max": 40, "gap_px": 8 },
+  "motion_tile_px": 20
+}

@@ -8,7 +8,7 @@
 #   5. Свет только на актёра (light linking): ключ и заливка не рисуют пятен на колоннах — как флаги и сетки на площадке.
 #   6. motivated: ключ приходит со стороны реального источника (солнце/окно), если тот рядом с короткой стороной.
 #   7. капюшон/шляпа: ключ ниже, заливка сильнее (см. place).
-import math
+import math, os, json
 import bpy
 from mathutils import Vector
 
@@ -90,10 +90,12 @@ class ShotLights:
 
 # ---------- объектив: глубина резкости как у оператора ----------
 # Цель — размытие фона (диаметр кружка нерезкости в долях ширины кадра) и минимальная глубина резкости на лице.
-BOKEH = {'ECU': 0.03, 'CU': 0.025, 'MCU': 0.018, 'MS': 0.011, 'FS': 0.006}   # по кадрам-образцам: фон за лицом — пятна
-DOF_MIN = {'ECU': 0.03, 'CU': 0.06, 'MCU': 0.10, 'MS': 0.25, 'FS': 0.6}   # м: оба глаза и нос в зоне резкости
+# Таблицы общие с JS-движком (engine/lens.js): studio/crew/lens.json, чтобы числа не разъехались.
+LENS = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'crew', 'lens.json'), encoding='utf-8'))
+BOKEH = LENS['bokeh']       # по кадрам-образцам: фон за лицом — пятна
+DOF_MIN = LENS['dof_min']   # м: оба глаза и нос в зоне резкости
 
-def fstop_for(size, lens_mm, sensor_w_mm, focus_m, bg_m, cur, coc_frac=1 / 1500):
+def fstop_for(size, lens_mm, sensor_w_mm, focus_m, bg_m, cur, coc_frac=LENS['coc_frac']):
     """Самая закрытая диафрагма, при которой фон ещё размыт на BOKEH[size] кадра, но не меньше нужной глубины на лице."""
     if size not in BOKEH: return cur
     f = lens_mm; s = max(focus_m * 1000, f * 1.5); d = max(bg_m * 1000, s + 1)
