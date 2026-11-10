@@ -18,3 +18,6 @@ npm install && npx playwright install chromium
 node render.mjs --w 1280 --h 720 --out out/preview.mp4
 node render.mjs --stills 120,600,1200      # стоп-кадры для проверки
 ```
+
+## Стили
+Этот репозиторий делает 3D. Остальные стили (2D, toon, стоп-моушен) живут в отдельных репозиториях. Карта и каталог серий «Любовь, смерть и роботы» по стилям лежат в [`styles/`](styles/README.md).
