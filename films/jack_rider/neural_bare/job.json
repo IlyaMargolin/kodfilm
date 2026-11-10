@@ -1,0 +1,19 @@
+{
+ "w": 832,
+ "h": 480,
+ "steps": 30,
+ "refs": [
+  "ref_threeq.png"
+ ],
+ "style": "Cinematic film still, photoreal, shot on ARRI Alexa, 65mm lens, shallow depth of field. A 35-year-old man, bare head, no helmet, short tousled dark chestnut hair, natural blue eyes, light stubble, a small healed X-shaped scar on his right cheek, weathered skin with pores and fine lines. He wears a pale beige weathered embossed leather motorcycle jacket with a stand-up collar and a dark inner collar. Open pale quarry landscape behind, soft late-afternoon sunlight, natural skin tones, fine micro detail, individual hair strands, subtle film grain.",
+ "shots": [
+  {
+   "name": "bare_depth",
+   "mode": "depth",
+   "src": "shots/beauty.mp4",
+   "prompt": "close-up, the camera slowly arcs around his head, he looks calmly past the camera",
+   "seed": 7,
+   "strength": 1.0
+  }
+ ]
+}
