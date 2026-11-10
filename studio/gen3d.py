@@ -10,7 +10,7 @@ if not os.path.isdir(H):
     sh(f'git clone -q --depth 1 https://github.com/Tencent/Hunyuan3D-2.git {H}')
     sh(f"cd {H} && grep -viE '^(torch|torchvision|torchaudio|numpy|gradio|fastapi|uvicorn|bpy)([=<>~ ]|$)' requirements.txt > req.txt; cat req.txt; {sys.executable} -m pip install -q -r req.txt")
     sh(f'{sys.executable} -m pip install -q rembg onnxruntime pybind11 ninja')
-    sh(f"{sys.executable} -m pip install -q 'transformers==4.48.3'")   # новее — другие имена слоёв DINOv2, веса не грузятся
+    sh(f"{sys.executable} -m pip install -q 'transformers==4.48.3' 'diffusers==0.32.2' 'huggingface-hub==0.36.2' 'accelerate==1.3.0'")   # стек, под который писали Hunyuan3D: в новых transformers у DINOv2 другие имена слоёв, веса не грузятся
     sh(f'cd {H} && {sys.executable} -m pip install -q --no-deps -e .')
     if job.get('texture', True):
         sh(f'cd {H}/hy3dgen/texgen/custom_rasterizer && {sys.executable} setup.py install > {OUT}/install_rast.txt 2>&1; tail -3 {OUT}/install_rast.txt')
