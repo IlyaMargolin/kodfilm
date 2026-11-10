@@ -10,11 +10,13 @@ if not os.path.isdir(H):
     sh(f'git clone -q --depth 1 https://github.com/Tencent/Hunyuan3D-2.git {H}')
     sh(f"cd {H} && grep -viE '^(torch|torchvision|torchaudio|numpy|gradio|fastapi|uvicorn|bpy)([=<>~ ]|$)' requirements.txt > req.txt; cat req.txt; {sys.executable} -m pip install -q -r req.txt")
     sh(f'{sys.executable} -m pip install -q rembg onnxruntime pybind11 ninja')
+    sh(f"{sys.executable} -m pip install -q 'transformers==4.48.3'")   # новее — другие имена слоёв DINOv2, веса не грузятся
     sh(f'cd {H} && {sys.executable} -m pip install -q --no-deps -e .')
     if job.get('texture', True):
-        sh(f'cd {H}/hy3dgen/texgen/custom_rasterizer && {sys.executable} setup.py install 2>&1 | tail -3')
-        sh(f'cd {H}/hy3dgen/texgen/differentiable_renderer && {sys.executable} setup.py install 2>&1 | tail -3')
+        sh(f'cd {H}/hy3dgen/texgen/custom_rasterizer && {sys.executable} setup.py install > {OUT}/install_rast.txt 2>&1; tail -3 {OUT}/install_rast.txt')
+        sh(f'cd {H}/hy3dgen/texgen/differentiable_renderer && {sys.executable} setup.py install > {OUT}/install_dr.txt 2>&1; tail -3 {OUT}/install_dr.txt')
 sys.path.insert(0, H)
+sh(f"{sys.executable} -m pip list 2>/dev/null | grep -iE '^(transformers|diffusers|torch|pymeshlab|trimesh|xatlas|custom.rasterizer|mesh.processor) ' > {OUT}/versions.txt; cat {OUT}/versions.txt")
 import torch
 from PIL import Image
 print('GPU:', torch.cuda.get_device_name(0), round(torch.cuda.get_device_properties(0).total_memory / 2 ** 30, 1), 'ГБ', flush=True)
