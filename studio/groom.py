@@ -170,7 +170,7 @@ def eevee_hair(st):
     # прядь в EEVEE не тоньше пикселя: при полном числе детей шевелюра становится войлоком — берём треть
     st.display_percentage = 100; st.child_percent = max(2, st.rendered_child_count // 3); st.display_step = st.render_step
 
-def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0, hooded=False, recede=0.008):
+def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0, hooded=False, recede=0.008, edge=0.8, brow_density=1.0):
     """Волосы + борода. Длины по анатомии роста: волосы ~1 см/мес, борода путника за 3–4 мес — 3–4 см.
     hooded: волосы короче, чтобы не пробивать капюшон. recede: залысины на висках (м), растут с возрастом."""
     if 'eyes' not in ob: return None
@@ -195,13 +195,13 @@ def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0
         print('groom: под капюшоном скальп', round(sk * 100), '% корней', flush=True)
     ss = _system(ob, 'scalp', scalp, mi, int(14000 * density * sk), L, 9, 0.0002, (0, -0.95, -0.45), 0.35, 0.0014, rnd=0.08)
     ss.vertex_group_length = 'scalp_len'
-    _system(ob, 'hairline', ob.vertex_groups['hairline'], mi, int(2500 * density), L * 0.8, 9, 0.0002, (0, -1.4, -0.35), 0.3, 0.0012, rnd=0.06)
+    _system(ob, 'hairline', ob.vertex_groups['hairline'], mi, int(2500 * density), L * edge, 9, 0.0002, (0, -1.4, -0.35), 0.3, 0.0012, rnd=0.06)
     # брови прядями: короткие (8–10 мм) жёсткие волоски, у переносицы вверх, дальше — к виску, прижаты к коже.
     # Ось X тела: +X — сторона левого глаза (ob['eyes'][0]); волоски уходят наружу от переносицы
     E, X, Y, Z = _frame(ob)
     for g, sx in zip(brows, (1, -1)):
         d = X * sx * 1.4 + Z * 0.45 + Y * 0.15
-        _system(ob, g.name, g, mi, int(650 * density), 0.008, 8, 0.00016, tuple(d), 0.25, 0.0006, rnd=0.12)
+        _system(ob, g.name, g, mi, int(650 * density * brow_density), 0.008, 8, 0.00016, tuple(d), 0.25, 0.0006, rnd=0.12)
     if beard_len > 0:
         # борода растёт вниз и вперёд, на щеках — прижата, на подбородке — пучками; волос бороды жёстче и толще (≈100 мкм)
         # борода лежит, а не торчит: волна (борода путника вьётся), пряди собраны в пучки, меньше разброса направлений —

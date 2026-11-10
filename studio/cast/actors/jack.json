@@ -1,0 +1,95 @@
+{
+ "id": "jack",
+ "name": "Джек Райдер",
+ "status": "в труппе",
+ "model": null,
+ "human": {
+  "skeleton": "Soldier.glb",
+  "gender": 1.0,
+  "age": 0.577,
+  "muscle": 0.62,
+  "weight": 0.5,
+  "height": 0.42,
+  "proportions": 0.7,
+  "skin": [
+   0.6,
+   0.44,
+   0.34
+  ],
+  "race": {
+   "caucasian": 0.9,
+   "african": 0.04,
+   "asian": 0.06
+  },
+  "anatomy": [
+   "masculine"
+  ],
+  "hair": [
+   0.045,
+   0.027,
+   0.016
+  ],
+  "grey": 0.0,
+  "scalp_len": 0.032,
+  "beard": 0.0,
+  "stubble": 0.9,
+  "skin_texture": "middleage_caucasian_male",
+  "eyebrows": "eyebrow010",
+  "eyelashes": "eyelashes02",
+  "eyes": "blue",
+  "wardrobe": "riderwear",
+  "costume": "05",
+  "jacket": [
+   0.42,
+   0.37,
+   0.3
+  ],
+  "panel": [
+   0.07,
+   0.07,
+   0.075
+  ],
+  "pants": [
+   0.075,
+   0.075,
+   0.08
+  ],
+  "boots": [
+   0.33,
+   0.3,
+   0.26
+  ],
+  "gloves": [
+   0.05,
+   0.05,
+   0.055
+  ],
+  "helmet": {
+   "shell": [
+    0.42,
+    0.38,
+    0.32
+   ],
+   "stripe": [
+    0.05,
+    0.16,
+    0.16
+   ]
+  }
+ },
+ "look": "35 лет, костюм 05: светлая короткая куртка с тёмными вставками, тёмные брюки, светлые высокие ботинки, светлый угловатый интегральный шлем с сине-зелёной вставкой; голубые глаза, короткая стрижка ножницами",
+ "height": 1.8,
+ "character": "молчаливый, внимательный, ищет людей и продолжает ехать",
+ "gait": "ровный, экономный",
+ "range": [
+  "мотоциклист",
+  "путник"
+ ],
+ "tier": "lead",
+ "anim": [
+  "idle",
+  "walk",
+  "run"
+ ],
+ "note": "фильм «Джек Райдер»: films/jack_rider; одежда studio/riderwear.py, шлем studio/kit/helmet.py, мотоцикл studio/kit/moto.py. Скульпт лица — предложение, не утверждён"
+}
