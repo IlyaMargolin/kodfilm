@@ -1,0 +1,8 @@
+custom_rasterizer                     0.1
+diffusers                             0.32.2
+mesh_processor                        0.0.0
+pymeshlab                             2025.7.post1
+torch                                 2.11.0+cu130
+transformers                          4.48.3
+trimesh                               5.2.0
+xatlas                                0.0.11
