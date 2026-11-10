@@ -116,4 +116,4 @@ def _visor_mat(name):
     return m
 
 def visor(h, k):
-    h['visor_pivot'].rotation_euler = (math.radians(58 * k), 0, 0)
+    h['visor_pivot'].rotation_euler = (math.radians(78 * k), 0, 0)

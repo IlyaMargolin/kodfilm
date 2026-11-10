@@ -1,0 +1,26 @@
+{
+ "w": 832,
+ "h": 480,
+ "steps": 30,
+ "refs": ["ref_face.png"],
+ "style": "Cinematic film still, photoreal, shot on ARRI Alexa, 65mm lens, shallow depth of field. A 35-year-old man with short dark chestnut hair, natural blue eyes, light stubble, a small healed X-shaped scar on his right cheek, weathered skin with pores and fine lines. He wears a light beige full-face motorcycle helmet with the clear visor raised, and a pale embossed leather jacket with a stand-up collar. Soft late-afternoon sunlight, natural skin tones, fine micro detail, subtle film grain.",
+ "shots": [
+  {
+   "name": "face_inpaint",
+   "mode": "face",
+   "src": "shots/beauty.mp4",
+   "mask": "shots/mask.mp4",
+   "prompt": "close-up, the camera slowly arcs around his face inside the open helmet, he looks calmly past the camera",
+   "seed": 7,
+   "strength": 1.0
+  },
+  {
+   "name": "full_depth",
+   "mode": "depth",
+   "src": "shots/beauty.mp4",
+   "prompt": "close-up, the camera slowly arcs around his face inside the open helmet, he looks calmly past the camera",
+   "seed": 7,
+   "strength": 1.0
+  }
+ ]
+}

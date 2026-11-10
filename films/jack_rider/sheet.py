@@ -109,3 +109,46 @@ if what in ('jack', 'head'):
             helm(h, on); hair(body, not on); hm.visor(h, vk)
             c = cam(sc, C + d * 1.25 + Vector((0, 0, 0.02)), C + Vector((0, 0, -0.04)), lens=85); shoot(sc, c, os.path.join(out, f'head_{k}.png'))
     bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out, f'{what}.blend')))
+
+if what == 'clip':   # тест нейро-финиша: поднятое забрало, камера 65 мм обходит голову по дуге 50°
+    NF = int(os.environ.get('FRAMES', '49'))
+    sc = world.new_scene(W, int(W * 480 / 832) // 2 * 2, 24, engine='CYCLES', TAA=S); sc.view_settings.exposure = 0.3
+    world.hdri('quarry_01_1k.hdr', 0.7); world.sun(28, 200, 3.5)
+    bpy.ops.mesh.primitive_plane_add(size=40); bpy.context.object.data.materials.append(bpy.data.materials.new('ground'))
+    hero, body, gear, h = build_jack(sc)
+    import human
+    from kit import helmet as hm
+    hair(body, False); hm.visor(h, 1)
+    el, er = human.eyes_world(body, hero.arm); em = (Vector(el) + Vector(er)) / 2
+    fw = em - hero.arm.matrix_world.translation; fw.z = 0; fw.normalize(); rt = fw.cross(Vector((0, 0, 1))).normalized()
+    cd = bpy.data.cameras.new('c'); cd.lens = 65; cd.dof.use_dof = True; cd.dof.aperture_fstop = 2.8; cd.dof.focus_distance = 1.3
+    c = bpy.data.objects.new('cam', cd); sc.collection.objects.link(c); sc.camera = c
+    os.makedirs(out, exist_ok=True)
+    for f in range(NF):
+        a = math.radians(-35 + 50 * f / max(1, NF - 1))
+        d = fw * math.cos(a) + rt * math.sin(a)
+        c.location = em + d * 1.3 + Vector((0, 0, 0.05)); tgt = em + Vector((0, 0, -0.06))
+        c.rotation_euler = (tgt - c.location).to_track_quat('-Z', 'Y').to_euler()
+        c.keyframe_insert('location', frame=f + 1); c.keyframe_insert('rotation_euler', frame=f + 1)
+    sc.frame_start, sc.frame_end = 1, NF
+    bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(os.path.join(out, 'clip.blend')))
+    for f in range(NF):
+        sc.frame_set(f + 1); sc.render.filepath = os.path.join(out, 'beauty', f'f{f:04d}.png'); bpy.ops.render.render(write_still=True)
+    # маска лица для нейро-финиша: кожа головы белая, всё остальное чёрное (эмиссия, 1 сэмпл)
+    def emis(name, v):
+        m = bpy.data.materials.new(name); m.use_nodes = True; N = m.node_tree.nodes
+        for n_ in list(N): N.remove(n_)
+        e = N.new('ShaderNodeEmission'); e.inputs[0].default_value = (v, v, v, 1); o_ = N.new('ShaderNodeOutputMaterial')
+        m.node_tree.links.new(e.outputs[0], o_.inputs[0]); return m
+    blk, wht = emis('mask_black', 0.0), emis('mask_white', 1.0)
+    for o in bpy.data.objects:
+        if o.type in ('MESH', 'CURVE'):
+            for sl in o.material_slots: sl.material = wht if (o == body and sl.material and sl.material.name.startswith('skin')) else blk
+    for m in body.modifiers:
+        if m.type == 'PARTICLE_SYSTEM': m.show_render = False
+    for o in bpy.data.objects:
+        if o.type == 'LIGHT': o.hide_render = True
+    sc.world.node_tree.nodes['Background'].inputs[1].default_value = 0.0
+    sc.cycles.samples = 1; sc.cycles.use_denoising = False; sc.view_settings.view_transform = 'Standard'; sc.view_settings.look = 'None'
+    for f in range(NF):
+        sc.frame_set(f + 1); sc.render.filepath = os.path.join(out, 'mask', f'f{f:04d}.png'); bpy.ops.render.render(write_still=True)
