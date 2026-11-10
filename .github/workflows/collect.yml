@@ -24,8 +24,8 @@ jobs:
       - run: |
           T=KT${{ github.event.inputs.account || '1' }}; export KAGGLE_API_TOKEN="${!T}"
           [ -n "$KAGGLE_API_TOKEN" ] || { echo "::error::нет секрета для аккаунта ${{ github.event.inputs.account }}"; exit 1; }
-          U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))")
-          S=$(kaggle kernels status $U/${{ github.event.inputs.kernel }} 2>&1); echo "$S"
+          U=$(python3 -c "from kaggle.api.kaggle_api_extended import KaggleApi as K; a=K(); a.authenticate(); print(a.get_config_value('username'))" 2>&1) || { echo "::error::токен аккаунта не принят: $U"; exit 1; }
+          S=$(kaggle kernels status $U/${{ github.event.inputs.kernel }} 2>&1) || true; echo "$U: $S"
           echo "$S" | grep -qi 'complete' || { echo "::error::ноутбук ещё не закончил: вывод был бы от прошлой версии"; exit 1; }
           mkdir -p result && kaggle kernels output $U/${{ github.event.inputs.kernel }} -p result
           ls -la result result/out 2>/dev/null | head -20
