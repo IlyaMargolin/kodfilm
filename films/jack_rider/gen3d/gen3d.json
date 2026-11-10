@@ -1,0 +1,78 @@
+{
+ "steps": 30,
+ "octree": 380,
+ "faces": 150000,
+ "texture": true,
+ "objects": [
+  {
+   "name": "jack_head",
+   "views": {
+    "front": "jack_head/front.jpg",
+    "left": "jack_head/left.jpg",
+    "back": "jack_head/back.jpg"
+   }
+  },
+  {
+   "name": "jack_helmet",
+   "views": {
+    "front": "jack_helmet/front.jpg",
+    "left": "jack_helmet/left.jpg"
+   }
+  },
+  {
+   "name": "hound_ash",
+   "views": {
+    "left": "hound_ash/left.jpg",
+    "front": "hound_ash/front.jpg",
+    "back": "hound_ash/back.jpg"
+   }
+  },
+  {
+   "name": "ray_levitating",
+   "views": {
+    "front": "ray_levitating/front.jpg",
+    "left": "ray_levitating/left.jpg"
+   }
+  },
+  {
+   "name": "salamander_gills",
+   "views": {
+    "left": "salamander_gills/left.jpg",
+    "front": "salamander_gills/front.jpg",
+    "back": "salamander_gills/back.jpg"
+   }
+  },
+  {
+   "name": "mustelid_leaftail",
+   "views": {
+    "left": "mustelid_leaftail/left.jpg",
+    "front": "mustelid_leaftail/front.jpg",
+    "back": "mustelid_leaftail/back.jpg"
+   }
+  },
+  {
+   "name": "boar_armored",
+   "views": {
+    "left": "boar_armored/left.jpg",
+    "front": "boar_armored/front.jpg",
+    "back": "boar_armored/back.jpg"
+   }
+  },
+  {
+   "name": "heron_purple",
+   "views": {
+    "left": "heron_purple/left.jpg",
+    "front": "heron_purple/front.jpg",
+    "back": "heron_purple/back.jpg"
+   }
+  },
+  {
+   "name": "deer_amber",
+   "views": {
+    "left": "deer_amber/left.jpg",
+    "front": "deer_amber/front.jpg",
+    "back": "deer_amber/back.jpg"
+   }
+  }
+ ]
+}

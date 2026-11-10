@@ -4,6 +4,9 @@
 # Режимы плана (job.json -> shots[].mode):
 #   'face'  — перерисовать только область маски (кожа лица), всё остальное кадра остаётся рендером ядра;
 #   'depth' — перерисовать весь кадр по глубине ядра (больше реализма, больше свободы модели);
+#   'hybrid' — весь кадр по глубине, но объекты «держать» (шлем, байк) и небо приходят из рендера ядра как
+#              контекст (VACE видит их и подгоняет свет), а в итоге вклеиваются обратно точно.
+#              Нужен shots[].ids — видео/кадры studio/idmask.py: R кожа, G держать, B небо.
 # Запуск: neural/farm.py, если в farm.json script указывает на job.json задания.
 import os, sys, json, glob, subprocess, time, gc
 JOB = sys.argv[1]; D = os.path.dirname(JOB); OUT = sys.argv[2] if len(sys.argv) > 2 else '/kaggle/working/out'
@@ -39,10 +42,17 @@ for sh in job['shots']:
         mk, _ = frames(sh['mask'], 'L')
         mk = [m.point(lambda v: 255 if v > 40 else 0).filter(ImageFilter.MaxFilter(17)).filter(ImageFilter.MinFilter(7)).filter(ImageFilter.GaussianBlur(2)) for m in mk]
         vid = [Image.composite(Image.new('RGB', (W, H), (127, 127, 127)), s, m) for s, m in zip(src, mk)]
+    elif sh['mode'] == 'hybrid':
+        ids, _ = frames(sh['ids'])
+        keep = [Image.fromarray((np.array(i)[..., 1:].max(-1) > 100).astype(np.uint8) * 255) for i in ids]
+        mk = [k.point(lambda v: 255 - v).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1)) for k in keep]  # генерация чуть заходит на края
+        dep = depth_maps(src)
+        vid = [Image.composite(d, s, m) for d, s, m in zip(dep, src, mk)]   # в зоне генерации — глубина, вне — сам рендер
+        kf = [k.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(2)) for k in keep]   # мягкая вклейка обратно
     else:
         vid = depth_maps(src); mk = [Image.new('L', (W, H), 255)] * len(vid)
     ref = [Image.open(os.path.join(D, r)).convert('RGB') for r in sh.get('refs', job.get('refs', []))]
-    PREP[sh['name']] = (src, vid, mk, ref, n)
+    PREP[sh['name']] = (src, vid, mk, ref, n, kf if sh.get('mode') == 'hybrid' else None)
     iio.imwrite(os.path.join(OUT, sh['name'] + '_input.mp4'), np.stack([np.array(v) for v in vid]), fps=24, codec='libx264')
 
 from diffusers import AutoencoderKLWan, WanVACEPipeline, UniPCMultistepScheduler
@@ -61,7 +71,7 @@ pipe.text_encoder = None; gc.collect(); torch.cuda.empty_cache()
 pipe.to('cuda'); pipe.vae.enable_tiling()
 
 for sh in job['shots']:
-    t0 = time.time(); src, vid, mk, ref, n = PREP[sh['name']]
+    t0 = time.time(); src, vid, mk, ref, n, kf = PREP[sh['name']]
     pe, ne = EMB[sh['name']]
     def run():
         pdt = next(pipe.transformer.parameters()).dtype
@@ -74,6 +84,8 @@ for sh in job['shots']:
     out = (np.clip(out[:n], 0, 1) * 255).astype(np.uint8)
     if sh.get('mode', 'face') == 'face':   # вне маски — точно рендер ядра (модель не трогает шлем, куртку, фон)
         out = np.stack([np.array(Image.composite(Image.fromarray(o), s, m)) for o, s, m in zip(out, src[:n], mk[:n])])
+    if kf:   # шлем, байк, небо — точно из ядра
+        out = np.stack([np.array(Image.composite(s, Image.fromarray(o), k)) for o, s, k in zip(out, src[:n], kf[:n])])
     iio.imwrite(os.path.join(OUT, sh['name'] + '.mp4'), out, fps=24, codec='libx264', quality=9)
     side = np.concatenate([np.stack([np.array(s) for s in src[:n]]), out], axis=2)
     iio.imwrite(os.path.join(OUT, sh['name'] + '_before_after.mp4'), side, fps=24, codec='libx264', quality=9)

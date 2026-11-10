@@ -118,7 +118,8 @@ if what == 'clip':   # тест нейро-финиша: поднятое заб
     hero, body, gear, h = build_jack(sc)
     import human
     from kit import helmet as hm
-    hair(body, False); hm.visor(h, 1)
+    BARE = os.environ.get('BARE') == '1'   # без шлема: волосы включены
+    hair(body, BARE); hm.visor(h, 1); helm(h, not BARE)
     el, er = human.eyes_world(body, hero.arm); em = (Vector(el) + Vector(er)) / 2
     fw = em - hero.arm.matrix_world.translation; fw.z = 0; fw.normalize(); rt = fw.cross(Vector((0, 0, 1))).normalized()
     cd = bpy.data.cameras.new('c'); cd.lens = 65; cd.dof.use_dof = True; cd.dof.aperture_fstop = 2.8; cd.dof.focus_distance = 1.3
