@@ -1,0 +1,127 @@
+00:01.316  cycles           | WARNING HIPEW initialization failed: Error opening HIP dynamic library
+Cycles GPU: CUDA ['Tesla T4']
+вид: кино {'light': {'scheme': None, 'key': None, 'fill': None, 'rim': None, 'side': None, 'temp': None, 'ambient': 1.7}, 'color': {'palette': None, 'sat': 1.0, 'contrast': 0, 'exposure': 0.0}}
+00:32:50 | INFO: Data are loaded, start creating Blender stuff
+00:32:50 | INFO: Blender create Mesh node 0
+00:32:53 | INFO: glTF import finished in 2.21s
+00:32:53 | INFO: Data are loaded, start creating Blender stuff
+00:32:53 | INFO: Blender create Mesh node vanguard_Mesh
+00:32:53 | INFO: Blender create Mesh node vanguard_visor
+00:32:53 | INFO: glTF import finished in 0.24s
+мимика: 19 единиц
+robe: сглажен рельеф груди, вершин 640
+robe: грудь одной дугой (выпуклые срезы), сдвинуто вершин 142
+robe: ткань висит от груди к поясу, сдвинуто вершин 218 грудь z 1.441 пояс z 1.215
+robe top: merged/cleaned, removed 0 island verts, 2 poles
+groom: под капюшоном скальп 72 % корней
+align idle 56.7 deg
+align run -7.8 deg
+бег: наклон корпуса 9.0 °, костей 3
+мимика: морганий 7
+plant [('mixamorig:LeftFoot', 7), ('mixamorig:RightFoot', 8)]
+  0.0–  2.1  INS  18мм  push       thirds     архитектура: взгляд вверх вдоль нефа, к небу
+  2.1–  4.3  EWS  18мм  slow_push  scale      одиночество в пространстве
+  4.3–  6.0  FS   40мм  static     centered   остановка
+  6.0–  7.8  WS   24мм  slow_push  negative   герой и пространство
+  7.8– 10.3  CU   65мм  push       dirty      лицо снизу: благоговение
+ 10.3– 12.8  WS   18мм  slow_push  scale      снизу из-за спины: он и свод
+ 12.8– 14.3  MCU  65мм  static     dirty      лицо, тяжесть
+ 14.3– 15.8  CU   65мм  slow_push  thirds     внутренний момент
+ 15.8– 17.2  MS   40мм  track                 бег сбоку
+ 17.2– 18.6  CU   65мм  lead                  лицо в беге
+вставка 0: камера отодвинута от пути героя на 1.69 м
+shot 0 INS thirds (-0.167, 0.167) архитектура: взгляд вверх вдоль нефа, к небу az_fix 0 cam (-5.4, 1.0, 2.5) hero (-6.9, 0.2, 0.0)
+shot 1 EWS scale (0.0, -0.3) одиночество в пространстве az_fix 0 cam (-10.8, 0.5, 2.1) hero (-4.0, 0.2, 0.0)
+  диафрагма 4.0 → 1.4 (фокус 8.20 м, фон 15.3 м)
+shot 2 FS centered (0.0, 0.12) остановка az_fix 0 cam (4.2, 0.1, 0.8) hero (-4.0, 0.2, 0.0)
+shot 3 WS negative (0.34, -0.08) герой и пространство az_fix -90 cam (1.3, 1.1, 1.8) hero (-4.0, 0.2, 0.0)
+  диафрагма 2.2 → 1.4 (фокус 3.03 м, фон 7.8 м)
+shot 4 CU dirty (0.2, 0.1) лицо снизу: благоговение az_fix 0 cam (-1.8, 1.0, 0.7) hero (-4.0, 0.2, 0.0)
+shot 5 WS scale (0.0, -0.3) снизу из-за спины: он и свод az_fix 15 cam (-10.8, -1.6, 1.1) hero (-4.0, 0.2, 0.0)
+  диафрагма 2.8 → 1.6 (фокус 3.96 м, фон 12.0 м)
+shot 6 MCU dirty (0.2, 0.1) лицо, тяжесть az_fix -15 cam (-0.1, 1.6, 1.4) hero (-4.0, 0.2, 0.0)
+  диафрагма 2.2 → 1.5 (фокус 2.83 м, фон 7.2 м)
+shot 7 CU thirds (0.167, 0.167) внутренний момент az_fix -15 cam (-1.5, 1.4, 1.5) hero (-4.0, 0.2, 0.0)
+  план 8: с азимута 90° годных точек 0% — снимаю спереди-сбоку
+  диафрагма 3.5 → 1.4 (фокус 3.66 м, фон 7.5 м)
+shot 8 MS  None бег сбоку (спереди: сбоку стена) az_fix 0 cam (5.3, 1.7, 0.8) hero (2.1, 0.2, 0.0)
+  диафрагма 2.2 → 1.9 (фокус 2.71 м, фон 9.7 м)
+shot 9 CU  None лицо в беге az_fix -15 cam (9.8, 1.0, 1.7) hero (9.2, 0.3, 0.0)
+слоумо: кадров сцены 446 → кадров фильма 441
+EGL Error (0x3009): EGL_BAD_MATCH: Arguments are inconsistent (for example, a valid context requires buffers not supplied by a valid surface).
+EGL Error (0x3009): EGL_BAD_MATCH: Arguments are inconsistent (for example, a valid context requires buffers not supplied by a valid surface).
+EGL Error (0x3009): EGL_BAD_MATCH: Arguments are inconsistent (for example, a valid context requires buffers not supplied by a valid surface).
+01:45.114  render           | Saved: '/kaggle/working/out/frames/f_00149.png'
+frame 149 shot03
+02:53.684  render           | Saved: '/kaggle/working/out/frames/f_00150.png'
+frame 150 shot03
+04:00.190  render           | Saved: '/kaggle/working/out/frames/f_00151.png'
+frame 151 shot03
+04:53.839  render           | Saved: '/kaggle/working/out/frames/f_00152.png'
+frame 152 shot03
+05:52.872  render           | Saved: '/kaggle/working/out/frames/f_00153.png'
+frame 153 shot03
+06:44.559  render           | Saved: '/kaggle/working/out/frames/f_00154.png'
+frame 154 shot03
+07:45.788  render           | Saved: '/kaggle/working/out/frames/f_00155.png'
+frame 155 shot03
+08:38.757  render           | Saved: '/kaggle/working/out/frames/f_00156.png'
+frame 156 shot03
+09:37.711  render           | Saved: '/kaggle/working/out/frames/f_00157.png'
+frame 157 shot03
+10:40.925  render           | Saved: '/kaggle/working/out/frames/f_00158.png'
+frame 158 shot03
+11:33.977  render           | Saved: '/kaggle/working/out/frames/f_00159.png'
+frame 159 shot03
+12:36.549  render           | Saved: '/kaggle/working/out/frames/f_00160.png'
+frame 160 shot03
+13:30.950  render           | Saved: '/kaggle/working/out/frames/f_00161.png'
+frame 161 shot03
+14:31.039  render           | Saved: '/kaggle/working/out/frames/f_00162.png'
+frame 162 shot03
+15:23.457  render           | Saved: '/kaggle/working/out/frames/f_00163.png'
+frame 163 shot03
+16:22.451  render           | Saved: '/kaggle/working/out/frames/f_00164.png'
+frame 164 shot03
+17:13.920  render           | Saved: '/kaggle/working/out/frames/f_00165.png'
+frame 165 shot03
+18:16.103  render           | Saved: '/kaggle/working/out/frames/f_00166.png'
+frame 166 shot03
+19:09.303  render           | Saved: '/kaggle/working/out/frames/f_00167.png'
+frame 167 shot03
+20:13.486  render           | Saved: '/kaggle/working/out/frames/f_00168.png'
+frame 168 shot03
+21:06.892  render           | Saved: '/kaggle/working/out/frames/f_00169.png'
+frame 169 shot03
+22:06.481  render           | Saved: '/kaggle/working/out/frames/f_00170.png'
+frame 170 shot03
+23:07.592  render           | Saved: '/kaggle/working/out/frames/f_00171.png'
+frame 171 shot03
+24:03.221  render           | Saved: '/kaggle/working/out/frames/f_00172.png'
+frame 172 shot03
+25:07.501  render           | Saved: '/kaggle/working/out/frames/f_00173.png'
+frame 173 shot03
+26:01.382  render           | Saved: '/kaggle/working/out/frames/f_00174.png'
+frame 174 shot03
+27:01.811  render           | Saved: '/kaggle/working/out/frames/f_00175.png'
+frame 175 shot03
+27:54.630  render           | Saved: '/kaggle/working/out/frames/f_00176.png'
+frame 176 shot03
+28:53.219  render           | Saved: '/kaggle/working/out/frames/f_00177.png'
+frame 177 shot03
+29:43.723  render           | Saved: '/kaggle/working/out/frames/f_00178.png'
+frame 178 shot03
+30:46.319  render           | Saved: '/kaggle/working/out/frames/f_00179.png'
+frame 179 shot03
+31:46.242  render           | Saved: '/kaggle/working/out/frames/f_00180.png'
+frame 180 shot03
+32:42.336  render           | Saved: '/kaggle/working/out/frames/f_00181.png'
+frame 181 shot03
+33:44.033  render           | Saved: '/kaggle/working/out/frames/f_00182.png'
+frame 182 shot03
+34:37.676  render           | Saved: '/kaggle/working/out/frames/f_00183.png'
+frame 183 shot03
+35:37.802  render           | Saved: '/kaggle/working/out/frames/f_00184.png'
+frame 184 shot03
+36:38.088  render           | Saved: '/kaggle/working/out/frames/f_00185.png'
+frame 185 shot03
