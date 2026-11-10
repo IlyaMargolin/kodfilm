@@ -53,10 +53,10 @@ def mix(a, b, t):
     return out
 
 def for_shot(scene, emotion):
-    """Палитра плана: ведущая палитра сцены, сдвинутая на 45% к палитре эмоции бита."""
+    """Палитра плана: ведущая палитра сцены, сдвинутая на 30% к палитре эмоции бита."""
     from crew.emotions import canon
     base = scene_palette(scene); emo = EMOTION.get(canon(emotion), None)
-    p = mix(base, emo, 0.45) if emo and emo != base else mix(base, base, 0)
+    p = mix(base, emo, 0.3) if emo and emo != base else mix(base, base, 0)   # 0.45 давал резкий скачок цвета на склейке между битами
     p['name'] = base + (f'→{emo}' if emo and emo != base else '')
     return p
 

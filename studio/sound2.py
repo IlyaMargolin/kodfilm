@@ -27,15 +27,22 @@ def sample(name):
         _cache[name] = x / (np.abs(x).max() + 1e-9)
     return _cache[name]
 
-def step_sound(kind, size_h):
-    """Шаг в броне по камню: удар подошвы (запись) + лязг пластин брони, тише и глуше на общих планах.
+def step_sound(kind, size_h, foley=None):
+    """Шаг по камню по костюму актёра (meta.foley): босая ступня — мягкий глухой шлепок без каблука и без металла;
+    обувь/сапог — удар подошвы; броня и робот — плюс лязг пластин (раньше лязг был у всех — паломник «звенел» на бегу).
     Каждый шаг немного другой (вариант записи, высота ±1.5 полутона, громкость ±2 дБ) — как у фоли-артиста."""
+    fo = foley or dict(feet='boot', armor=True)
     st = sample(f'footstep_concrete_{rng.integers(0, 5):03d}')
     semis = rng.uniform(-1.5, 1.5) - (2.0 if kind == 'run' else 3.0)          # тяжёлый человек — ниже
     st = signal.resample(st, int(len(st) * 2 ** (-semis / 12))).astype(np.float32)
-    body = s1.lp(st, 2500) * 0.9 + s1.band(st, 80, 300) * 0.8                  # вес тела: низ
-    clank = sample(f'impact_metal_light_{rng.integers(0, 5):03d}')
-    clank = signal.resample(clank, int(len(clank) * 1.3)).astype(np.float32) * (0.22 if kind == 'walk' else 0.32)
+    if fo.get('feet') == 'bare':   # кожа по камню: нет щелчка каблука — срезаем верх, остаётся вес и мягкий шлепок
+        body = s1.lp(st, 1100) * 0.75 + s1.band(st, 70, 220) * 0.6
+    else:
+        body = s1.lp(st, 2500) * 0.9 + s1.band(st, 80, 300) * 0.8              # вес тела: низ
+    clank = np.zeros(0, np.float32)
+    if fo.get('armor') or fo.get('feet') == 'metal':
+        clank = sample(f'impact_metal_light_{rng.integers(0, 5):03d}')
+        clank = signal.resample(clank, int(len(clank) * 1.3)).astype(np.float32) * (0.22 if kind == 'walk' else 0.32)
     n = max(len(body), len(clank) + 900); x = np.zeros(n, np.float32)
     x[:len(body)] += body; x[900:900 + len(clank)] += clank                   # лязг чуть позже удара
     if size_h > 2.0: x = s1.lp(x, 6000 / math.log2(size_h + 1)).astype(np.float32)   # издалека — без верхов
@@ -124,7 +131,7 @@ def build(meta):
         s = shot_at(st['t']); h = FRAME_H[s['size']]
         # громкость по расстоянию до микрофона (крупность плана ~ дистанция): −6 дБ на удвоение, как в жизни
         g = float(np.clip(0.42 * (0.9 / h) ** 0.5, 0.05, 0.5)) * (1.25 if st['kind'] == 'run' else 1.0)
-        put(foley, step_sound(st['kind'], h), st['t'], g, pan=(-0.08 if st['side'] == 'fl' else 0.08))
+        put(foley, step_sound(st['kind'], h, meta.get('foley')), st['t'], g, pan=(-0.08 if st['side'] == 'fl' else 0.08))
     amb = np.zeros((N, 2), np.float32)
     wind = s1.hp(s1.lp(np.cumsum(rng.standard_normal(N)) * 0.02, 900), 120); wind /= np.abs(wind).max()
     tt = np.arange(N) / SR; lfo = 0.6 + 0.4 * np.sin(2 * np.pi * tt / 7.3) * np.sin(2 * np.pi * tt / 2.9 + 1)

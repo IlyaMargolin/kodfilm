@@ -155,7 +155,7 @@ def _system(ob, name, group, mat_index, count, length, children, width, align, c
     st.clump_factor = clump; st.clump_shape = 0.1                      # пряди мягко сходятся к кончикам (сильнее — «дреды»)
     # шум пучков (clump noise) в Blender задаётся в метрах мира — на голове 2 см он разбрасывает детей поперёк лица; не используем
     st.roughness_1 = rough * 0.5; st.roughness_1_size = 0.4; st.roughness_endpoint = rough * 0.8; st.roughness_end_shape = 1.2
-    st.roughness_2 = rough * 0.6; st.roughness_2_size = 2.0; st.roughness_2_threshold = 0.6   # отдельные «непослушные» волоски
+    st.roughness_2 = rough * 0.6; st.roughness_2_size = 2.0; st.roughness_2_threshold = 0.88   # отдельные «непослушные» волоски: ~12%, а не 40% (иначе борода «ёжиком», Храм v2)
     if kink: st.kink = 'CURL'; st.kink_amplitude = kink; st.kink_frequency = 6
     elif wave: st.kink = 'WAVE'; st.kink_amplitude = wave; st.kink_frequency = 2.2; st.kink_shape = 0.3
     st.material = mat_index + 1
@@ -204,7 +204,9 @@ def groom(ob, color=None, grey=0.25, scalp_len=0.05, beard_len=0.03, density=1.0
         _system(ob, g.name, g, mi, int(650 * density), 0.008, 8, 0.00016, tuple(d), 0.25, 0.0006, rnd=0.12)
     if beard_len > 0:
         # борода растёт вниз и вперёд, на щеках — прижата, на подбородке — пучками; волос бороды жёстче и толще (≈100 мкм)
-        bs = _system(ob, 'beard', beard, mi, int(9000 * density), beard_len, 10, 0.00024, (0, 0.35, -1.25), 0.45, 0.0016)
+        # борода лежит, а не торчит: волна (борода путника вьётся), пряди собраны в пучки, меньше разброса направлений —
+        # прямые жёсткие волоски врозь читались «ёжиком» (Храм v2). Больше детей тоньше — та же масса, мягче край
+        bs = _system(ob, 'beard', beard, mi, int(9000 * density), beard_len, 14, 0.00023, (0, 0.35, -1.45), 0.6, 0.0012, wave=0.0025, rnd=0.15)
         bs.vertex_group_length = 'beard_len'
         # усы: короткие (≈1 см), растут вниз и наружу от середины — кончики ложатся на край верхней губы и к уголкам рта,
         # но не закрывают рот

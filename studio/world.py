@@ -302,6 +302,48 @@ class Actor:
         for s, m in zip(self.track.strips, keep): s.mute = m
         return d
 
+    def restyle(self, act, lean=9.0, head_keep=0.7):
+        """Стиль движения поверх мокапа: наклон корпуса вперёд (бег — падение вперёд, которое ловят ноги).
+        Игровой клип бега держит корпус вертикально, как на беговой дорожке, — «бег ради бега» (Храм v2).
+        Наклон делим между Spine/Spine1 (позвоночник гнётся дугой, а не ломается в одном позвонке),
+        шея возвращает голову на head_keep доли наклона: взгляд остаётся на цели. Стопы и таз не трогаем —
+        опора и скорость шага те же. Поворот — в мировых осях тела, поэтому не зависит от осей костей рига."""
+        if act not in self.actions or not lean: return 0
+        sc = bpy.context.scene; a = self.actions[act]; ad = self.arm.animation_data; pb = self.arm.pose.bones
+        def bn(n): return next((k for k in (f'mixamorig:{n}', f'mixamorig{n}', n) if k in pb), None)
+        chain = [(bn('Spine'), lean * 0.55), (bn('Spine1'), lean * 0.45), (bn('Neck'), -lean * head_keep)]
+        chain = [(b, d) for b, d in chain if b]
+        if not chain: return 0
+        y = self._feet_yaw(act); Wi = self.arm.matrix_world.inverted().to_3x3()
+        fwd = (Wi @ Vector((math.cos(y), math.sin(y), 0))).normalized(); up = (Wi @ Vector((0, 0, 1))).normalized()
+        right = fwd.cross(up).normalized()
+        keep = [s_.mute for s_ in self.track.strips]
+        for s_ in self.track.strips: s_.mute = True
+        ad.action = a; n_done = 0
+        for b, deg in chain:
+            pb[b].rotation_mode = 'QUATERNION'
+            fcs = [fc for fc in _fcurves(a) if fc.data_path == f'pose.bones["{b}"].rotation_quaternion']
+            if len(fcs) < 4: continue
+            times = sorted({round(k.co[0], 4) for fc in fcs for k in fc.keyframe_points})
+            R = Matrix.Rotation(math.radians(-deg), 4, right)   # минус: вершина позвоночника уходит вперёд (к fwd)
+            new = {}; prev = None
+            for t in times:
+                sc.frame_set(int(math.floor(t)), subframe=t - math.floor(t)); bpy.context.view_layer.update()
+                M = pb[b].matrix.copy(); h = M.translation.copy()
+                pb[b].matrix = Matrix.Translation(h) @ R @ Matrix.Translation(-h) @ M; bpy.context.view_layer.update()
+                q = pb[b].rotation_quaternion.copy()
+                if prev is not None and q.dot(prev) < 0: q.negate()
+                prev = q; new[t] = q
+            for fc in fcs:
+                for k in fc.keyframe_points:
+                    v = new[round(k.co[0], 4)][fc.array_index]
+                    d_ = v - k.co[1]; k.co[1] = v; k.handle_left[1] += d_; k.handle_right[1] += d_
+                fc.update()
+            n_done += 1
+        ad.action = None
+        for s_, m in zip(self.track.strips, keep): s_.mute = m
+        return n_done
+
     def plant_feet(self, f0, f1, ramp=4):
         with bones_only():
             return self._plant_feet(f0, f1, ramp)

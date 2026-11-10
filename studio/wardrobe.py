@@ -151,6 +151,48 @@ def _hang_front(verts, mw, belt_z, col=0.025):
         if target > y: v.co = mwi @ Vector((x, target, z)); moved += 1
     print('robe: ткань висит от груди к поясу, сдвинуто вершин', moved, 'грудь z', round(float(zp), 3), 'пояс z', round(belt_z, 3))
 
+def _hull2(P):
+    """Выпуклая оболочка точек на плоскости (монотонная цепь), против часовой стрелки."""
+    P = sorted(set(map(tuple, P)))
+    if len(P) < 3: return P
+    cr = lambda o, a, b: (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+    lo, up = [], []
+    for p in P:
+        while len(lo) >= 2 and cr(lo[-2], lo[-1], p) <= 0: lo.pop()
+        lo.append(p)
+    for p in reversed(P):
+        while len(up) >= 2 and cr(up[-2], up[-1], p) <= 0: up.pop()
+        up.append(p)
+    return lo[:-1] + up[:-1]
+
+def _convex_slices(verts, mw, z0, z1, band=0.015):
+    """Шерсть не заходит во впадины: в каждом горизонтальном срезе торса ткань — выпуклая оболочка среза.
+    Ложбинка между грудными мышцами (и над ними) исчезает — грудь рясы одна ровная дуга, а не два бугра,
+    которые на общем плане читались женской грудью (замечание Ильи, Храм v2, 5 с). Вершина уходит наружу
+    от центра среза до оболочки; внутрь — никогда."""
+    import numpy as np
+    if not verts: return 0
+    mwi = mw.inverted(); W = np.array([(mw @ v.co)[:] for v in verts]); moved = 0
+    for zc in np.arange(z0, z1, band):
+        idx = np.where(np.abs(W[:, 2] - zc) <= band * 0.5)[0]
+        if len(idx) < 8: continue
+        H = np.array(_hull2(W[idx, :2].round(5)))
+        if len(H) < 3: continue
+        c = W[idx, :2].mean(0)
+        for i in idx:
+            p = W[i, :2]; d = p - c; L = np.linalg.norm(d)
+            if L < 1e-6: continue
+            d /= L; best = None
+            for k in range(len(H)):          # пересечение луча c + t·d с ребром оболочки
+                a_, b_ = H[k], H[(k + 1) % len(H)]; e = b_ - a_
+                den = d[0] * (-e[1]) - d[1] * (-e[0])
+                if abs(den) < 1e-12: continue
+                r = a_ - c; t = (r[0] * (-e[1]) - r[1] * (-e[0])) / den; u = (d[0] * r[1] - d[1] * r[0]) / den
+                if t > 0 and -1e-6 <= u <= 1 + 1e-6: best = t if best is None else max(best, t)
+            if best is not None and best > L + 1e-4:
+                q = c + d * best; verts[i].co = mwi @ Vector((q[0], q[1], W[i, 2])); moved += 1
+    return moved
+
 def _taubin(verts, iters, lam=0.6, mu=-0.63):
     """Сглаживание Таубина: шаг λ сглаживает, шаг μ возвращает объём — рельеф уходит, форма торса не худеет.
     Соседи вне списка неподвижны (граница зоны)."""
@@ -194,7 +236,7 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         if _w(body, bv, ('Hand', 'Head', 'Neck')) > 0.5 or _w(body, bv, ('Leg', 'Foot', 'Toe')) > 0.5: kill.append(v); continue
         if v.index >= ps or any(f.material_index > 0 for f in v.link_faces): kill.append(v); continue     # брови/ресницы/глаза — не ткань
         fore = _w(body, bv, ('ForeArm',)); armw = _w(body, bv, ('Arm',))
-        off = 0.036 + sleeve * fore
+        off = 0.045 + sleeve * fore          # шерсть свободнее: 4.5 см от тела (было 3.6 — сидела «свитером»)
         v.co += v.normal * off
     # ткань натягивается поверх рельефа, а не облегает его: сглаживание «только наружу» заполняет впадины
     # (под грудными мышцами, подмышки, позвоночник), выпуклости остаются опорами — как шерсть, лежащая на теле
@@ -210,6 +252,9 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         for v, d in upd: v.co += d
     # после «только наружу» перед торса ещё раз выравнивается: опоры-бугры не должны проступать сквозь шерсть
     _taubin([v for v in front if v not in killset], 30)
+    torso = [v for v in bm.verts if v not in killset and v.index < ps and _w(body, body.data.vertices[v.index], ('Arm', 'Hand', 'Shoulder')) < 0.15]
+    print('robe: грудь одной дугой (выпуклые срезы), сдвинуто вершин', _convex_slices(torso, mw_, hip.z + 0.14, neck_z - 0.1))
+    _taubin([v for v in front if v not in killset], 10)
     _hang_front([v for v in front if v not in killset], mw_, hip.z + 0.12)
     bmesh.ops.delete(bm, geom=kill, context='VERTS')
     # швы и обрезки: сшиваем совпадающие вершины, выкидываем мелкие острова (иначе сглаживание их не трогает — «соски» на ткани)
@@ -231,9 +276,9 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         # шатёр: сглаживание «только наружу» держало соски как опоры. Срезаем рельеф ткани в радиусе 5 см вокруг полюса
         pc = [v.co.copy() for v in poles]
         area = [v for v in bm.verts if not v.is_boundary and any((v.co - c).length < 0.05 for c in pc)]
-        for _ in range(30):
-            new = {v: v.co.lerp(sum((e.other_vert(v).co for e in v.link_edges), Vector()) / len(v.link_edges), 0.6) for v in area}
-            for v, c in new.items(): v.co = c
+        # Таубин, а не простое сглаживание: лапласиан на выпуклой груди тянул ткань внутрь — вмятина посреди груди
+        # читалась ложбинкой (Храм v2). λ/μ снимает рельеф и держит объём
+        _taubin(area, 30)
         # растворяем полюс и ставим новую вершину в центр дыры (poke): ровный веер вместо тонких треугольников-щепок,
         # которые после сглаживания давали звезду-блик на месте соска; затем кольцо выравнивается (лапласиан)
         bmesh.ops.dissolve_verts(bm, verts=poles)
@@ -241,11 +286,7 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
         res = bmesh.ops.poke(bm, faces=ng, center_mode='MEAN_WEIGHTED')
         ring = set(res['verts'])
         for v in list(ring): ring.update(e.other_vert(v) for e in v.link_edges)
-        for _ in range(12):
-            for v in ring:
-                if v.is_boundary: continue
-                nb = [e.other_vert(v).co for e in v.link_edges]
-                v.co = v.co.lerp(sum(nb, Vector()) / len(nb), 0.5)
+        _taubin([v for v in ring if not v.is_boundary], 12)
     print('robe top: merged/cleaned, removed', len(small), 'island verts,', len(poles), 'poles')
     bm.to_mesh(me); bm.free()
     me.materials.clear(); me.materials.append(mat)
@@ -273,9 +314,9 @@ def _robe(body, arm, color=(0.09, 0.075, 0.06), hood=True, sleeve=0.035, length=
     # сгущениям сетки у подмышек и рождали острый бугор на груди в позе с опущенными руками (замер: +12 мм)
     sm = top.modifiers.new('drape', 'SMOOTH'); sm.factor = 1.0; sm.iterations = 12
     # складки под собственным весом: вертикально вытянутый шум (как висит тяжёлая шерсть от плеч к поясу)
-    tx = bpy.data.textures.new('robe_folds', 'CLOUDS'); tx.noise_scale = 0.09; tx.noise_depth = 1
+    tx = bpy.data.textures.new('robe_folds', 'CLOUDS'); tx.noise_scale = 0.075; tx.noise_depth = 2
     em = bpy.data.objects.new('robe_folds_space', None); bpy.context.scene.collection.objects.link(em); em.scale = (1, 1, 5); em.parent = arm; em.matrix_parent_inverse = arm.matrix_world.inverted()
-    dp = top.modifiers.new('folds', 'DISPLACE'); dp.texture = tx; dp.strength = 0.007; dp.mid_level = 0.5; dp.texture_coords = 'OBJECT'; dp.texture_coords_object = em
+    dp = top.modifiers.new('folds', 'DISPLACE'); dp.texture = tx; dp.strength = 0.013; dp.mid_level = 0.5; dp.texture_coords = 'OBJECT'; dp.texture_coords_object = em
     sol = top.modifiers.new('thick', 'SOLIDIFY'); sol.thickness = 0.008; sol.offset = 1
     sub = top.modifiers.new('sub', 'SUBSURF'); sub.levels = 1; sub.render_levels = 2
     # 2) юбка: конус от бёдер до щиколоток (складки — шум по окружности)

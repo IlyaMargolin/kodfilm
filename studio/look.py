@@ -85,10 +85,11 @@ def tone(scene, lk):
     except TypeError: print(f'look: кривой {CONTRAST[c]} нет в этой сборке Blender', flush=True)
     scene.view_settings.exposure += lk['color'].get('exposure', 0.0)
 
-# слова сценария → правки пульта (СВЕТ/ДЫМКА/ТУМАН_ВИД/НЕОН/НАСЫЩЕННОСТЬ/ЗЕРНО)
+# слова сценария → правки пульта (СВЕТ/ДЫМКА/ОБЪЁМ/НЕОН/НАСЫЩЕННОСТЬ/ЗЕРНО/КОНТРАСТ/ВИНЬЕТКА/ОПТИКА/ОКРУЖЕНИЕ)
 WORDS = {'СВЕТ': ('light', 'scheme', str), 'ДЫМКА': ('air', 'depth', float), 'ОБЪЁМ': ('air', 'fog', float),
          'НЕОН': ('neon', 'on', lambda v: v.strip().lower() not in ('0', 'нет', 'off', '')), 'НАСЫЩЕННОСТЬ': ('color', 'sat', float),
-         'ЗЕРНО': ('post', 'grain', float), 'КОНТРАСТ': ('color', 'contrast', int), 'ВИНЬЕТКА': ('post', 'vignette', float), 'ОПТИКА': ('optics', 'lens', str)}
+         'ЗЕРНО': ('post', 'grain', float), 'КОНТРАСТ': ('color', 'contrast', int), 'ВИНЬЕТКА': ('post', 'vignette', float), 'ОПТИКА': ('optics', 'lens', str),
+         'ОКРУЖЕНИЕ': ('light', 'ambient', float)}   # свет неба/отражений: >1 — тени открываются, пространство читается
 
 def from_words(pairs):
     """[(КЛЮЧ, значение)] из шапки сценария → overrides для load()."""

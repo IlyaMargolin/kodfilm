@@ -89,7 +89,7 @@ def parse(text):
                 col = next(('#' + x.lstrip('#') for x in pp[3:] if re.fullmatch(r'#?[0-9a-fA-F]{6}', x)), '#FFB060')   # цвет без «#»: «#» в шапке — комментарий
                 sc.practicals.append(dict(kind=kind, at=xyz, r=r, color=col))
             elif k == 'ВИД': sc.look = v.lower() if not v.endswith('.json') else v
-            elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'КОНТРАСТ', 'ВИНЬЕТКА', 'ОПТИКА'):
+            elif k in ('СВЕТ', 'ДЫМКА', 'ОБЪЁМ', 'ОБЪЕМ', 'НЕОН', 'НАСЫЩЕННОСТЬ', 'ЗЕРНО', 'КОНТРАСТ', 'ВИНЬЕТКА', 'ОПТИКА', 'ОКРУЖЕНИЕ'):
                 sc.look_words.append(('ОБЪЁМ' if k == 'ОБЪЕМ' else k, v.lower() if k in ('СВЕТ', 'ОПТИКА') else v))
             continue
         m = re.match(r'\[(.+?)\]\s*(.*)', line)

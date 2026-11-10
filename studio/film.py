@@ -86,11 +86,21 @@ if SPEC.get('human'):        # живой человек: своё тело (Mak
 if SPEC.get('mech'):         # робот: твёрдые детали на костях того же скелета (studio/mech.py), исходная сетка прячется
     import mech
     mech.build(hero.arm, SPEC['mech'], meshes=[o_ for o_ in bpy.data.objects if o_.type == 'MESH' and (o_.parent == hero.arm or any(m.type == 'ARMATURE' and m.object == hero.arm for m in o_.modifiers))])
+# фоли шагов по костюму актёра (sound2): ряса — босиком по камню, робот — металл, солдат-модель — сапоги и броня.
+# Карточка может задать явно: "foley": {"feet": "bare"|"shoe"|"boot"|"metal", "armor": false}
+_hs = SPEC.get('human') or {}
+FOLEY = dict(feet='metal' if SPEC.get('mech') else 'bare' if _hs.get('wardrobe') == 'robe' else 'shoe' if _hs else 'boot',
+             armor=bool(SPEC.get('mech')) or not _hs)
+FOLEY.update(SPEC.get('foley') or {})
 # клипы мокапа к одному курсу: стойка и бег развёрнуты так же, как ходьба (иначе тело «крутится на подставке»)
 with world.bones_only():   # позовые циклы без пересчёта сеток и волос
     for _act in ('idle', 'run'):
         if _act in hero.actions and 'walk' in hero.actions:
             print('align', _act, round(math.degrees(hero.align_facing(_act, 'walk')), 1), 'deg', flush=True)
+    # стиль бега: корпус вперёд (карточка актёра: "run_style": {"lean": 9}); 0 — как в мокапе
+    if 'run' in hero.actions:
+        _rs = dict(dict(lean=9.0), **(SPEC.get('run_style') or {}))
+        print('бег: наклон корпуса', _rs['lean'], '°, костей', hero.restyle('run', _rs['lean']), flush=True)
     speed = {k: hero.cycle_speed(k) for k in ('walk', 'run') if k in hero.actions}
 ACT = {'walk': 'walk', 'run': 'run', 'stand': 'idle', 'look_up': 'idle', 'look_down': 'idle', 'look': 'idle', 'turn': 'idle'}
 pos = Vector((0, 0, 0)); yaw = 0.0
@@ -421,6 +431,24 @@ for si, sh in enumerate(shots):
         az_fix, kd_fix, de_fix = 0, 1.0, 0.0
     # разгон фильтров до склейки: камера входит в план уже в движении, без рывка «с места» в первых кадрах
     PRE = 0 if (sh.poi or sh.pov) else int(0.6 * FPS)
+    # вставка (вид мира) не стоит на пути героя: иначе он проходит вплотную к объективу 18 мм размытым пятном на весь
+    # кадр («что это пролетело?» — Храм v2, 1-я секунда). Камеру отодвигаем вбок от его пути, взгляд сохраняем
+    poi_off = Vector((0, 0, 0))
+    if sh.poi:
+        T_, F_ = Vector(sh.poi[0]), Vector(sh.poi[1]); CLEAR = 1.6
+        for _ in range(3):
+            near = None
+            for f in range(f0, min(f1 + int(0.5 * FPS), TOTAL) + 1):
+                u_ = (f - f0) / max(1, f1 - f0); sp_ = 0.5 * u_ + 0.5 * u_ * u_
+                cp = F_ + (F_ - T_) * (0.12 - 0.27 * sp_) + poi_off; pt = track_pts[min(max(f, 1), TOTAL) - 1]
+                for hp in (pt['rootS'], pt['headS'], pt['rootS'].lerp(pt['headS'], 0.5)):
+                    d = Vector((cp.x - hp.x, cp.y - hp.y)).length
+                    if near is None or d < near[0]: near = (d, cp, hp)
+            if near[0] >= CLEAR: break
+            away = Vector((near[1].x - near[2].x, near[1].y - near[2].y, 0))
+            if away.length < 1e-3: away = Vector((-(T_ - F_).y, (T_ - F_).x, 0))
+            poi_off += away.normalized() * (CLEAR - near[0] + 0.2)
+        if poi_off.length > 0: print(f'вставка {si}: камера отодвинута от пути героя на {poi_off.length:.2f} м', flush=True)
     for f in range(max(1, f0 - PRE), f1 + 1):
         u = max(0.0, (f - f0) / max(1, f1 - f0)); KEY = f >= f0
         P = subject(f, sh.target)
@@ -430,7 +458,7 @@ for si, sh in enumerate(shots):
             T, Fm = Vector(sh.poi[0]), Vector(sh.poi[1])
             # пролёт не тормозит к концу: склейка приходится на движение, следующий план его подхватывает
             sp = 0.5 * u + 0.5 * u * u
-            pos = Fm + (Fm - T) * (0.12 - 0.27 * sp)
+            pos = clamp(Fm + (Fm - T) * (0.12 - 0.27 * sp) + poi_off)
             aimv = T.copy(); P = T
         elif sh.pov:
             pos = p['head'] + fwd * 0.15
@@ -483,7 +511,7 @@ for si, sh in enumerate(shots):
                 if ang > lim:
                     pit2 = pit_d + ang - lim
                     q = Vector((math.cos(pit2) * math.cos(yaw_d), math.cos(pit2) * math.sin(yaw_d), math.sin(pit2))).to_track_quat('-Z', 'Y')
-        cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler()
+        cam.rotation_euler = (q @ Quaternion((0, 0, 1), math.radians(sh.dutch))).to_euler('XYZ', cam.rotation_euler)   # совместимо с прошлым ключом: без скачка ±180° внутри затвора
         if KEY: cam.keyframe_insert('location', frame=f); cam.keyframe_insert('rotation_euler', frame=f)
         if KEY and ((f - f0) % 6 == 0 or f == f1):   # для вида сверху на раскадровке: где камера и куда смотрит
             fw_m = cam.rotation_euler.to_matrix() @ Vector((0, 0, -1))
@@ -577,7 +605,7 @@ json.dump(dict(feet=[[tuple(round(c, 3) for c in p['fl']), tuple(round(c, 3) for
                beats=[dict(action=b.action, emotion=b.emotion, start=b.start, dur=b.dur, text=b.text) for b in scn.beats],
                shots=[dict(start=s.start, end=s.end, size=s.size, lens=s.lens, move=s.move, note=s.note, comp=s.comp, screen=s.screen, fstop=round(s.fstop, 1), why=s.why, speed=getattr(s, 'speed', 1.0), palette=dict(name=s.palette['name'], colors=palette.hexes(s.palette)) if getattr(s, 'palette', None) else None, detail=getattr(s, 'detail', None), qc=getattr(s, 'qc', None), cam=getattr(s, 'cam_path', None)) for s in shots],
                dp=getattr(scn, 'dp', None) or director.PROFILES[scn.director]['dp'],
-               director=scn.director, title=scn.title, look=LK), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
+               director=scn.director, title=scn.title, look=LK, foley=FOLEY), open(os.path.join(a.out, 'meta.json'), 'w'), ensure_ascii=False, indent=1)
 
 if a.save: bpy.ops.wm.save_as_mainfile(filepath=os.path.abspath(a.save))
 # ---------- рендер ----------
@@ -598,20 +626,28 @@ QS = {'ECU': (1.6, 0.006), 'CU': (1.5, 0.006), 'MCU': (1.3, 0.008), 'MS': (1.1, 
 base_s = sc.cycles.samples if a.engine == 'cycles' else 0
 # LOD по крупности (как у ILM: 2 000 деталей на общем, 20 000 на крупном): дети прядей и подразделение тела.
 # Корни прядей не меняются — меняется только густота интерполяции, поэтому между планами волосы не «прыгают»
-HAIR_K = {'ECU': 1.0, 'CU': 1.0, 'MCU': 0.85, 'MS': 0.6, 'FS': 0.35, 'WS': 0.2, 'EWS': 0.1}
+HAIR_K = {'ECU': 1.0, 'CU': 1.0, 'MCU': 1.0, 'MS': 0.8, 'FS': 0.55, 'WS': 0.4, 'EWS': 0.25}   # мягче: Храм v2 — «на общем волос нет, на крупном есть»
 SUBD = {'ECU': 2, 'CU': 2, 'MCU': 2, 'MS': 2, 'FS': 1, 'WS': 1, 'EWS': 1}
 psets = {ps.settings: (ps.settings.rendered_child_count, ps.settings.radius_scale) for o in sc.objects if o.type == 'MESH' for ps in o.particle_systems}
 subs = [(m, m.render_levels) for o in sc.objects if o.type == 'MESH' and o.particle_systems for m in o.modifiers if m.type == 'SUBSURF']
 # замер (Cycles, 480 px): волосы — 70–80% времени кадра даже там, где героя почти не видно: 27 тыс. корней × 10 детей
 # пересобираются в BVH каждый кадр на CPU, и GPU этого не ускоряет. На общих и вставках тонкие системы (скальп, брови,
 # усы) меньше пикселя — их выключаем; борода остаётся тёмной массой лица. Без героя в кадре (вставка) волосы не нужны вовсе
+RUN_SHUTTER = {'ECU': 0.17, 'CU': 0.17, 'MCU': 0.17, 'MS': 0.25}   # доля кадра на бегу: 0.17 ≈ 60°, 0.25 = 90°
 FINE_HAIR = {'scalp', 'hairline', 'brow_l', 'brow_r', 'moustache_l', 'moustache_r'}
-HAIR_SHOW = {'EWS': {'beard'}, 'WS': {'beard'}, 'INS': set()}
+# Брови, усы и кромка волос видны и на общем (лицо без бровей читается чужим), поэтому их больше не выключаем:
+# выключение давало скачок «волос нет → волосы есть» на склейке общий→крупный (замечание Ильи, Храм v2).
+# Экономия остаётся только во вставке без героя
+HAIR_SHOW = {'INS': set()}
 hair_mods = [(m, m.particle_system.settings.name) for o in sc.objects if o.type == 'MESH' for m in o.modifiers if m.type == 'PARTICLE_SYSTEM']
 for f in frames:
     sf = OUT[min(f, TOTAL_OUT) - 1]; fi = int(sf); fr = sf - fi
     ci = next((i for i, (f0, f1, c) in enumerate(cams) if f0 <= sf <= f1), len(cams) - 1); cam = cams[ci][2]
-    sc.render.motion_blur_shutter = 0.5 * _speed_at(sf)      # 180° при любой скорости: в слоумо выдержка короче
+    # затвор 180°, но крупные планы на бегу — узким затвором, как в экшн-сценах кино (45–90°): камера на стабилизаторе
+    # не повторяет подскок головы, и на 65 мм за 1/48 с лицо уезжает на десятки пикселей — «мыло». Замер (Храм, кадр 425):
+    # 180° лицо не читается, 90° мягко, 60° резко с живым следом движения. В слоумо выдержка короче вместе со скоростью
+    run_ = any(b.action == 'run' and b.start <= shots[ci].start + 0.05 < b.start + b.dur for b in scn.beats)
+    sc.render.motion_blur_shutter = (RUN_SHUTTER.get(shots[ci].size, 0.5) if run_ and not shots[ci].poi else 0.5) * _speed_at(sf)
     size_ = 'CU' if shots[ci].poi else shots[ci].size
     for st_, (n_, w_) in psets.items():   # меньше прядей — каждая толще: покрытие и цвет шевелюры не меняются
         k_ = HAIR_K.get(size_, 1.0); st_.rendered_child_count = max(2, int(round(n_ * k_))); st_.radius_scale = w_ * min(3.0, 1.0 / k_)

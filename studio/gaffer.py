@@ -40,9 +40,11 @@ class ShotLights:
                     rim=('SPOT', kelvin(6800 if warm else 3300), 0.35))
         if pal:   # палитра кадра: тёплый/холодный ключ из её цвета света, заливка — цветом теней, контур — против ключа
             import palette as _pl
-            spec['key'] = ('AREA', _pl.light_color(pal['key'], 0.7), 1.4)
+            # ключ светит на кожу: только лёгкий тон палитры (как гель 1/4–1/2 CTO), не цвет целиком — насыщенный янтарь
+            # давал «желтуху» лица на бегу (Храм v2, 16 с). Цвет сцены держат воздух, контур и грейд
+            spec['key'] = ('AREA', _pl.light_color(pal['key'], 0.38), 1.4)
             spec['fill'] = ('AREA', _pl.light_color(pal['shadow'], 0.5), 2.2)
-            spec['rim'] = ('SPOT', _pl.light_color(pal['shadow'] if sum(pal['key'][:1]) > pal['key'][2] else pal['key'], 0.8), 0.35)
+            spec['rim'] = ('SPOT', _pl.light_color(pal['shadow'] if sum(pal['key'][:1]) > pal['key'][2] else pal['key'], 0.6), 0.35)
         for k, (tp, colr, size) in spec.items():
             d = bpy.data.lights.new(f'{k}_{name}', tp); d.color = colr; d.energy = 0.0
             if tp == 'AREA': d.shape = 'DISK'; d.size = size
