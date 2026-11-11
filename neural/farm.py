@@ -9,6 +9,8 @@ shutil.copytree(SRC, W, dirs_exist_ok=True); os.makedirs(OUT, exist_ok=True)
 sh = lambda c: subprocess.run(c, shell=True, check=False)
 if job['script'].endswith('job.json'):   # задание нейро-финиша (studio/neural_finish.py): рендер ядра + Wan VACE
     sh(f'cd {W} && {sys.executable} studio/neural_finish.py {W}/{job["script"]} {OUT}'); print('ALL DONE'); sys.exit(0)
+if job['script'].endswith('i2v.json'):   # план целиком нейросетью от первого кадра (studio/i2v.py): Wan 2.2 TI2V-5B
+    sh(f'cd {W} && {sys.executable} studio/i2v.py {W}/{job["script"]} {OUT}'); print('ALL DONE'); sys.exit(0)
 if job['script'].endswith('gen3d.json'):   # 3D-модели с листов персонажей (studio/gen3d.py): Hunyuan3D-2mv
     sh(f'cd {W} && {sys.executable} studio/gen3d.py {W}/{job["script"]} {OUT}'); print('ALL DONE'); sys.exit(0)
 sh(f'{sys.executable} -m pip install -q bpy==5.2.3 soundfile')

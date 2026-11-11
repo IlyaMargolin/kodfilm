@@ -39,6 +39,9 @@ def depth_maps(fr):
 
 PREP = {}
 for sh in job['shots']:
+    if sh.get('mode') == 'ref':   # план только по эталонным картинкам персонажа и тексту, без рендера ядра
+        n = (sh.get('frames', 49) - 1) // 4 * 4 + 1; ref = [Image.open(os.path.join(D, r)).convert('RGB') for r in sh.get('refs', job.get('refs', []))]
+        PREP[sh['name']] = (None, None, None, ref, n, None); continue
     src, n = frames(sh['src'])
     if sh.get('mode', 'face') == 'face':
         mk, _ = frames(sh['mask'], 'L')
@@ -86,7 +89,7 @@ for sh in job['shots']:
                         num_inference_steps=steps, strength=sh.get('denoise', 0.4), guidance_scale=sh.get('cfg', 5.0),
                         generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
         return pipe(video=vid, mask=mk, reference_images=ref or None, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt),
-                    height=H, width=W, num_frames=len(vid), num_inference_steps=steps, guidance_scale=sh.get('cfg', 5.0),
+                    height=H, width=W, num_frames=len(vid) if vid else n, num_inference_steps=steps, guidance_scale=sh.get('cfg', 5.0),
                     conditioning_scale=sh.get('strength', 1.0), generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
     out = run()
     if not np.isfinite(out).all() or out.max() < 0.02:
@@ -97,6 +100,7 @@ for sh in job['shots']:
     if kf:   # шлем, байк, небо — точно из ядра
         out = np.stack([np.array(Image.composite(s, Image.fromarray(o), k)) for o, s, k in zip(out, src[:n], kf[:n])])
     iio.imwrite(os.path.join(OUT, sh['name'] + '.mp4'), out, fps=24, codec='libx264', quality=9)
+    if src is None: print('готово', sh['name'], n, 'кадров', round(time.time() - t0), 'с', flush=True); continue
     side = np.concatenate([np.stack([np.array(s) for s in src[:n]]), out], axis=2)
     iio.imwrite(os.path.join(OUT, sh['name'] + '_before_after.mp4'), side, fps=24, codec='libx264', quality=9)
     print('готово', sh['name'], n, 'кадров', round(time.time() - t0), 'с', flush=True)

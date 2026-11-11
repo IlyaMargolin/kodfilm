@@ -1,0 +1,15 @@
+{
+ "w": 896,
+ "h": 800,
+ "steps": 30,
+ "style": "Cinematic live-action film, photoreal, shot on ARRI Alexa, anamorphic lens, natural light, shallow depth of field, crisp detail, subtle film grain.",
+ "shots": [
+  {
+   "name": "jack_closeup_i2v",
+   "image": "jack_threeq_first.png",
+   "frames": 81,
+   "seed": 7,
+   "prompt": "Close-up of a 35-year-old man with short tousled dark brown hair, blue eyes, light stubble and a small X-shaped scar on his cheek, wearing a pale weathered leather jacket. He slowly turns his head toward the camera, blinks, and looks straight into the lens with a calm, tired expression. A light wind moves strands of his hair. The camera slowly pushes in."
+  }
+ ]
+}

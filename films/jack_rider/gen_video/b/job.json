@@ -1,0 +1,19 @@
+{
+ "w": 832,
+ "h": 480,
+ "steps": 30,
+ "style": "Cinematic live-action film, photoreal, shot on ARRI Alexa, anamorphic lens, natural light, shallow depth of field, crisp detail, subtle film grain.",
+ "refs": [
+  "../ref_helmet.png",
+  "../ref_body.png"
+ ],
+ "shots": [
+  {
+   "name": "jack_ride_ref",
+   "mode": "ref",
+   "frames": 81,
+   "seed": 7,
+   "prompt": "A motorcycle rider in a pale beige weathered full-face helmet with a clear open visor and a dark teal stripe, pale beige and dark grey leather jacket, dark grey trousers and pale boots rides a rugged motorcycle fast along a dusty desert road at golden hour, dust trailing behind, distant rocky mesas, the camera tracks alongside him at medium distance."
+  }
+ ]
+}
