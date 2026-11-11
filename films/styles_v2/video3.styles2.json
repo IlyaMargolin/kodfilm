@@ -1,0 +1,23 @@
+{
+ "stage": "video",
+ "w": 1024,
+ "h": 576,
+ "steps": 30,
+ "negative": "photorealistic photo, static frame, still image, morphing, warping, melting, distorted wheels, deformed, flicker, jitter, text, watermark, subtitles, low quality, blurry",
+ "shots": [
+  {
+   "name": "A_painted_chase",
+   "image": "A_painted_chase_s12.png",
+   "frames": 49,
+   "seed": 7,
+   "prompt": "Digital concept art painting in motion, loose smeared brush strokes and flat graphic shapes. A battered blue off-road jeep drives fast across the desert toward the camera, its suspension bouncing over the sand, wheels throwing up sand, thick dust clouds billow and swirl behind it. The camera tracks backward low to the ground. Painterly texture is preserved in every frame."
+  },
+  {
+   "name": "D_noir_mech",
+   "image": "D_noir_mech_s43.png",
+   "frames": 49,
+   "seed": 7,
+   "prompt": "Cinematic dark film shot. A colossal war mech silhouette stands in thick fog on flooded ground, it slowly turns its head and its red lights pulse, fog rolls across the dark water, ripples spread on the surface, a lone man stands still in front of it. The camera slowly pushes in. Moody, minimal, film grain."
+  }
+ ]
+}

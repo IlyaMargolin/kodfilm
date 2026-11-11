@@ -53,7 +53,8 @@ if not WORKER:
             pe, ne = pipe.encode_prompt(prompt=sh['prompt'], negative_prompt=sh.get('negative', NEG), do_classifier_free_guidance=True, device='cuda')
             E[sh['name']] = (pe.cpu(), ne.cpu())
     torch.save(E, EMBF); del pipe, E; gc.collect(); torch.cuda.empty_cache(); log('emb ok', round(time.time() - T0), 's')
-    n = int(subprocess.run('nvidia-smi -L | wc -l', shell=True, capture_output=True, text=True).stdout.strip() or 1)
+    # по умолчанию один воркер: два сразу не помещаются в 29 ГБ памяти Kaggle (второй молча убивает OOM)
+    n = min(job.get('workers', 1), int(subprocess.run('nvidia-smi -L | wc -l', shell=True, capture_output=True, text=True).stdout.strip() or 1))
     ps = [subprocess.Popen([sys.executable, __file__, JOB, OUT], env=dict(os.environ, S2_WORKER=f'{k}/{n}', CUDA_VISIBLE_DEVICES=str(k))) for k in range(n)]
     for p in ps: p.wait()
     log('VIDEO DONE', round(time.time() - T0), 's'); sys.exit(0)
