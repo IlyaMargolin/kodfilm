@@ -7,6 +7,8 @@ if not J: print('farm.json не найден'); sys.exit(1)
 SRC = os.path.dirname(J); job = json.load(open(J)); W = '/tmp/kf'; OUT = '/kaggle/working/out'   # рабочая копия вне /kaggle/working, чтобы код и ассеты не попадали в выход
 shutil.copytree(SRC, W, dirs_exist_ok=True); os.makedirs(OUT, exist_ok=True)
 sh = lambda c: subprocess.run(c, shell=True, check=False)
+if job['script'].endswith('styles2.json'):   # пробы стилей v2 (studio/styles_v2.py): опорные кадры SDXL + глубина, или Wan 2.2 картинка -> видео
+    sh(f'cd {W} && {sys.executable} studio/styles_v2.py {W}/{job["script"]} {OUT}'); print('ALL DONE'); sys.exit(0)
 sh(f'{sys.executable} -m pip install -q bpy==5.2.3 soundfile')
 sh('apt-get -qq install -y libxi6 libxxf86vm1 libxfixes3 libxrender1 libsm6 libgl1 libegl1 >/dev/null 2>&1 || true')
 sh(f'cd {W} && bash assets/fetch.sh && {sys.executable} assets/fetch_hq.py 4k')
