@@ -31,7 +31,7 @@ jobs:
           ls -la result result/out 2>/dev/null | head -20
           # ферма: ноутбук «закончил», но кадров нет — провал (лог в выводе выше), а не пустая «успешная» ветка
           if [ -f result/farm.py ] || ls result/out/log_*.txt >/dev/null 2>&1; then
-            [ -f result/out/frames.mp4 ] || { grep -ohE 'ERROR[^"]*|Traceback[^"]*' result/out/*.txt 2>/dev/null | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров"; exit 1; }
+            ls result/out/*.mp4 >/dev/null 2>&1 || { grep -ohE 'ERROR[^"]*|Traceback[^"]*' result/out/*.txt 2>/dev/null | sort | uniq -c | head; echo "::error::Kaggle не выдал кадров"; exit 1; }
           fi
           cd result && rm -f *.log && git init -q && git checkout -q -b B && git add -A && \
           git -c user.name=kodfilm-bot -c user.email=bot@kodfilm commit -qm "result" && \
