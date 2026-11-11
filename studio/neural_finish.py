@@ -6,6 +6,8 @@
 #   'depth' — перерисовать весь кадр по глубине ядра (больше реализма, больше свободы модели);
 #   'hybrid' — весь кадр по глубине, но объекты «держать» (шлем, байк) и небо приходят из рендера ядра как
 #              контекст (VACE видит их и подгоняет свет), а в итоге вклеиваются обратно точно.
+#   'refine' — «проявитель»: рендер ядра зашумляется на долю denoise (0.3–0.6) и восстанавливается моделью Wan 2.1 (видео→видео).
+#              Форма, черты и движение остаются от рендера (не плывут), модель добавляет поры, пряди, блики в глазах.
 #              Нужен shots[].ids — видео/кадры studio/idmask.py: R кожа, G держать, B небо.
 # Запуск: neural/farm.py, если в farm.json script указывает на job.json задания.
 import os, sys, json, glob, subprocess, time, gc
@@ -42,6 +44,8 @@ for sh in job['shots']:
         mk, _ = frames(sh['mask'], 'L')
         mk = [m.point(lambda v: 255 if v > 40 else 0).filter(ImageFilter.MaxFilter(17)).filter(ImageFilter.MinFilter(7)).filter(ImageFilter.GaussianBlur(2)) for m in mk]
         vid = [Image.composite(Image.new('RGB', (W, H), (127, 127, 127)), s, m) for s, m in zip(src, mk)]
+    elif sh['mode'] == 'refine':
+        vid = src; mk = None
     elif sh['mode'] == 'hybrid':
         ids, _ = frames(sh['ids'])
         keep = [Image.fromarray((np.array(i)[..., 1:].max(-1) > 100).astype(np.uint8) * 255) for i in ids]
@@ -53,13 +57,14 @@ for sh in job['shots']:
         vid = depth_maps(src); mk = [Image.new('L', (W, H), 255)] * len(vid)
     ref = [Image.open(os.path.join(D, r)).convert('RGB') for r in sh.get('refs', job.get('refs', []))]
     PREP[sh['name']] = (src, vid, mk, ref, n, kf if sh.get('mode') == 'hybrid' else None)
-    iio.imwrite(os.path.join(OUT, sh['name'] + '_input.mp4'), np.stack([np.array(v) for v in vid]), fps=24, codec='libx264')
+    if sh.get('mode') != 'refine': iio.imwrite(os.path.join(OUT, sh['name'] + '_input.mp4'), np.stack([np.array(v) for v in vid]), fps=24, codec='libx264')
 
-from diffusers import AutoencoderKLWan, WanVACEPipeline, UniPCMultistepScheduler
-MID = job.get('model', 'Wan-AI/Wan2.1-VACE-1.3B-diffusers')
+from diffusers import AutoencoderKLWan, WanVACEPipeline, WanVideoToVideoPipeline, UniPCMultistepScheduler
+REFINE = all(sh.get('mode') == 'refine' for sh in job['shots'])   # одно задание — один режим модели
+MID = job.get('model', 'Wan-AI/Wan2.1-T2V-1.3B-Diffusers' if REFINE else 'Wan-AI/Wan2.1-VACE-1.3B-diffusers')
 dt = torch.bfloat16 if torch.cuda.get_device_capability(0)[0] >= 8 else torch.float16
 vae = AutoencoderKLWan.from_pretrained(MID, subfolder='vae', torch_dtype=torch.float32)
-pipe = WanVACEPipeline.from_pretrained(MID, vae=vae, torch_dtype=dt)
+pipe = (WanVideoToVideoPipeline if REFINE else WanVACEPipeline).from_pretrained(MID, vae=vae, torch_dtype=dt)
 pipe.scheduler = UniPCMultistepScheduler.from_config(pipe.scheduler.config, flow_shift=3.0)
 NEG = job.get('negative', 'cartoon, cgi, video game, 3d render, plastic skin, wax, doll, low detail, blurry, deformed face, asymmetric eyes, beard, long sideburns, text, watermark, flicker')
 pipe.text_encoder.to('cuda'); EMB = {}
@@ -75,6 +80,10 @@ for sh in job['shots']:
     pe, ne = EMB[sh['name']]
     def run():
         pdt = next(pipe.transformer.parameters()).dtype
+        if REFINE:
+            return pipe(video=vid, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt), height=H, width=W,
+                        num_inference_steps=steps, strength=sh.get('denoise', 0.4), guidance_scale=sh.get('cfg', 5.0),
+                        generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]
         return pipe(video=vid, mask=mk, reference_images=ref or None, prompt_embeds=pe.to('cuda', pdt), negative_prompt_embeds=ne.to('cuda', pdt),
                     height=H, width=W, num_frames=len(vid), num_inference_steps=steps, guidance_scale=sh.get('cfg', 5.0),
                     conditioning_scale=sh.get('strength', 1.0), generator=torch.Generator('cpu').manual_seed(sh.get('seed', 7)), output_type='np').frames[0]

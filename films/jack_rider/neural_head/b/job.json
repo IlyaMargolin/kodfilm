@@ -1,0 +1,24 @@
+{
+ "w": 832,
+ "h": 480,
+ "steps": 30,
+ "style": "Cinematic film close-up, photoreal, shot on ARRI Alexa, 85mm lens. A 35-year-old man, bare head, short tousled dark chestnut hair with individual strands and flyaways, sharp detailed natural blue eyes with catchlights, defined eyelashes, light stubble, a small healed X-shaped scar on his right cheek, weathered skin with visible pores and fine lines. Pale beige weathered embossed leather jacket with a stand-up collar. Plain neutral grey studio background, soft key light, natural skin tones, crisp micro detail, subtle film grain.",
+ "shots": [
+  {
+   "name": "head_refine35",
+   "mode": "refine",
+   "src": "../shots/beauty.mp4",
+   "prompt": "the camera slowly arcs around his head from one side to the other, he stays still and looks straight ahead",
+   "seed": 7,
+   "denoise": 0.35
+  },
+  {
+   "name": "head_refine55",
+   "mode": "refine",
+   "src": "../shots/beauty.mp4",
+   "prompt": "the camera slowly arcs around his head from one side to the other, he stays still and looks straight ahead",
+   "seed": 7,
+   "denoise": 0.55
+  }
+ ]
+}
