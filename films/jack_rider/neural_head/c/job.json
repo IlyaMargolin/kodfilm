@@ -1,0 +1,21 @@
+{
+ "w": 832,
+ "h": 480,
+ "steps": 30,
+ "refs": [
+  "../ref_threeq.png"
+ ],
+ "style": "Cinematic film close-up, photoreal, shot on ARRI Alexa, 85mm lens. A 35-year-old man, bare head, short tousled dark chestnut brown hair made of thousands of fine individual strands, soft flyaway hairs catching the rim light, natural hairline, sharp detailed natural blue eyes with iris texture, catchlights and defined eyelashes, clean natural ears. Weathered skin, light stubble. Plain neutral grey studio background, soft key light, crisp micro detail, subtle film grain.",
+ "shots": [
+  {
+   "name": "head_hair",
+   "mode": "hybrid",
+   "src": "../shots/beauty.mp4",
+   "ids": "../ids_hair",
+   "grow": 13,
+   "prompt": "the camera slowly arcs around his head from one side to the other, he stays still and looks straight ahead, hair stays in place",
+   "seed": 7,
+   "strength": 1.0
+  }
+ ]
+}

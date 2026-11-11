@@ -49,10 +49,11 @@ for sh in job['shots']:
     elif sh['mode'] == 'hybrid':
         ids, _ = frames(sh['ids'])
         keep = [Image.fromarray((np.array(i)[..., 1:].max(-1) > 100).astype(np.uint8) * 255) for i in ids]
-        mk = [k.point(lambda v: 255 - v).filter(ImageFilter.MaxFilter(5)).filter(ImageFilter.GaussianBlur(1)) for k in keep]  # генерация чуть заходит на края
+        g = sh.get('grow', 5)   # на сколько пикселей генерация заходит за край зоны (волосам нужен запас под выбившиеся пряди)
+        mk = [k.point(lambda v: 255 - v).filter(ImageFilter.MaxFilter(g)).filter(ImageFilter.GaussianBlur(1)) for k in keep]
         dep = depth_maps(src)
         vid = [Image.composite(d, s, m) for d, s, m in zip(dep, src, mk)]   # в зоне генерации — глубина, вне — сам рендер
-        kf = [k.filter(ImageFilter.MinFilter(5)).filter(ImageFilter.GaussianBlur(2)) for k in keep]   # мягкая вклейка обратно
+        kf = [k.filter(ImageFilter.MinFilter(g)).filter(ImageFilter.GaussianBlur(2)) for k in keep]   # мягкая вклейка обратно
     else:
         vid = depth_maps(src); mk = [Image.new('L', (W, H), 255)] * len(vid)
     ref = [Image.open(os.path.join(D, r)).convert('RGB') for r in sh.get('refs', job.get('refs', []))]
