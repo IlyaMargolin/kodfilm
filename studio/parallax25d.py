@@ -23,13 +23,15 @@ def fill(rgb, valid):                                      # push-pull: дост
 
 qs = np.quantile(d, np.linspace(0, 1, L + 1)); qs[-1] += 1e-3
 layers = []
-for i in range(L):
+for i in (range(L) if P.get('mode') == 'layers' else []):
     behind = (d < qs[i + 1]).astype(np.float32)
     m = ((d >= qs[i]) & (d < qs[i + 1])).astype(np.float32)
     m = cv2.dilate(m, np.ones((5, 5), np.uint8)) if i > 0 else np.ones_like(m)
     m = cv2.GaussianBlur(m, (0, 0), 1.2) * (1 if i > 0 else 1)
     rgb = fill(img, cv2.erode(behind, np.ones((3, 3), np.uint8)) if i > 0 else np.ones_like(behind))
-    z = float(np.median(d[(d >= qs[i]) & (d < qs[i + 1])])) if i > 0 else float(qs[1] * 0.5)
+    sel = d[(d >= qs[i]) & (d < qs[i + 1])]
+    if i > 0 and sel.size == 0: continue                 # пустой слой (у глубины много одинаковых значений)
+    z = float(np.median(sel)) if i > 0 else float(qs[1] * 0.5)
     layers.append((rgb, m, z))
 
 # мазки-дымка: шум, размазанный вдоль ветра, цвет из светлой дали кадра
@@ -41,8 +43,11 @@ def strokes(w, h, seed):
     t = cv2.GaussianBlur(t, (0, 0), 3); k = np.zeros((1, 61), np.float32); k[0] = 1 / 61
     t = cv2.filter2D(t, -1, k); t = cv2.GaussianBlur(t, (0, 0), 1.0)
     return (t - t.min()) / max(1e-6, t.max() - t.min())
-HZ = strokes(W * 2, H, P.get('seed', 3)); hz_col = np.array(P.get('haze_color') or np.percentile(img.reshape(-1, 3), 85, axis=0), np.float32)
+HZ = cv2.GaussianBlur(strokes(W * 2, H, P.get('seed', 3)), (0, 0), 2); hz_col = np.array(P.get('haze_color') or np.percentile(img.reshape(-1, 3), 85, axis=0), np.float32)
 hz_mask = np.clip(1 - d * 1.4, 0, 1) ** 1.2                 # дымка гуще вдали, у переднего плана тает
+GY, GX = np.mgrid[0:H, 0:W].astype(np.float32)
+DN = cv2.dilate(d, np.ones((7, 7), np.uint8))           # ближний край чуть шире: передний план закрывает фон, а не рвётся
+DN = cv2.GaussianBlur(DN, (0, 0), P.get('smooth', 10))   # гладкое поле сдвигов: без складок и двойных краёв на границах глубины
 dust = rng.uniform(0, 1, (P.get('dust', 200), 4))           # x, y, глубина, фаза
 ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'bgr24', '-s', f'{OW}x{OH}', '-r', str(P.get('fps', 24)), '-i', '-',
                        '-c:v', 'libx264', '-preset', 'slow', '-crf', '14', '-pix_fmt', 'yuv420p', OUT], stdin=subprocess.PIPE)
@@ -52,7 +57,20 @@ for f in range(N):
     tz, tx, ty = P.get('tz', 0.05) * e, P.get('tx', 0.02) * e, P.get('ty', 0.0) * e
     acc = np.zeros_like(img)
     cx, cy = W * P.get('focus', [0.5, 0.5])[0], H * P.get('focus', [0.5, 0.5])[1]
-    for i, (rgb, m, z) in enumerate(layers):
+    # непрерывный обратный варп по глубине: для пикселя кадра ищем, откуда он пришёл (неподвижная точка, 4 шага).
+    # Без слоёв нет ступенек на наклонных объектах; ближнее по расширенной глубине перекрывает дальнее.
+    q = np.stack([GX, GY], -1).astype(np.float32)
+    for _ in range(4):
+        z = cv2.remap(DN, q[..., 0], q[..., 1], cv2.INTER_LINEAR, borderMode=cv2.BORDER_REPLICATE)
+        zz = 0.15 + 0.85 * z; s_ = 1 / (1 - tz * zz)
+        dx = -tx * zz * W + P.get('drift', 0) * u * W * np.clip(1 - z * 4, 0, 1); dy = -ty * zz * H
+        q = np.stack([cx + (GX - cx - dx) / s_, cy + (GY - cy - dy) / s_], -1).astype(np.float32)
+    acc = cv2.remap(img, q[..., 0], q[..., 1], cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+    if P.get('haze', 0) > 0:
+        off = int((P.get('haze_speed', 0.06) * u) * W) % W
+        hz = HZ[:, off:off + W] * hz_mask * P['haze'] * (0.85 + 0.15 * np.sin(6.28 * (u + 0.2)))
+        acc = acc * (1 - hz[..., None]) + hz_col * hz[..., None]
+    for i, (rgb, m, z) in enumerate(layers if P.get('mode') == 'layers' else []):
         zz = 0.15 + 0.85 * z                              # обратная глубина: небо почти не двигается
         s = 1 / (1 - tz * zz); dx = -tx * zz * W + (P.get('drift', 0) * u * W if i == 0 else 0); dy = -ty * zz * H
         M = np.float32([[s, 0, (1 - s) * cx + dx], [0, s, (1 - s) * cy + dy]])
