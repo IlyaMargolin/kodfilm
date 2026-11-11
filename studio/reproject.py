@@ -86,6 +86,8 @@ def align(path, ref, tag):
     W = np.eye(2, 3, dtype=np.float32)
     try: _, W = cv2.findTransformECC(a, b, W, cv2.MOTION_AFFINE, (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 200, 1e-6), m, 5)
     except cv2.error as e: print('  ECC не сошёлся:', str(e)[:80])
+    if np.abs(W[:, 2]).max() > R * 0.07 or np.abs(W[:, :2] - np.eye(2)).max() > 0.12:      # ECC уехал (прозрачное забрало, блики) — не верим
+        print('  ECC отброшен:', [round(float(v), 1) for v in W[:, 2]]); W = np.eye(2, 3, dtype=np.float32)
     cut = cv2.warpAffine(cut, W, (R, R), flags=cv2.INTER_LANCZOS4 | cv2.WARP_INVERSE_MAP, borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
     fl = cv2.calcOpticalFlowFarneback((a * 255).astype(np.uint8), (g(cut) * 255).astype(np.uint8), None, 0.5, 5, 41, 5, 7, 1.5, 0)
     fl = np.clip(cv2.GaussianBlur(fl, (0, 0), 9), -R * 0.04, R * 0.04)
