@@ -23,7 +23,7 @@ with torch.no_grad():
         pe, ne = pipe.encode_prompt(prompt=job.get('style', '') + ' ' + sh['prompt'], negative_prompt=NEG, do_classifier_free_guidance=True, device='cuda')
         EMB[sh['name']] = (pe.to('cpu'), ne.to('cpu'))
 pipe.text_encoder = None; gc.collect(); torch.cuda.empty_cache()
-pipe.to('cuda'); pipe.vae.enable_tiling()
+pipe.enable_model_cpu_offload(); pipe.vae.enable_tiling()   # VAE и трансформер по очереди: вместе не помещаются в 15 ГБ T4
 for sh in job['shots']:
     t0 = time.time(); pe, ne = EMB[sh['name']]; n = sh.get('frames', 81); n = (n - 1) // 4 * 4 + 1
     def run():
