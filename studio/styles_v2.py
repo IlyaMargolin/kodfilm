@@ -9,7 +9,7 @@ job = json.load(open(JOB)); STAGE = job['stage']
 WORKER = os.environ.get('S2_WORKER')
 def log(*a):
     print(*a, flush=True)
-    with open(os.path.join(OUT, f'run_{WORKER or "main"}.txt'), 'a') as f: print(*a, file=f)
+    with open(os.path.join(OUT, f'run_{(WORKER or "main").replace("/", "of")}.txt'), 'a') as f: print(*a, file=f)
 
 if not WORKER:
     subprocess.run([sys.executable, '-m', 'pip', 'install', '-q', '-U', 'diffusers>=0.35', 'transformers>=4.51', 'accelerate', 'ftfy', 'imageio[ffmpeg]', 'av', 'sentencepiece'], check=False)
