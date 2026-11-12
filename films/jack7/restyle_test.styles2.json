@@ -1,0 +1,93 @@
+{
+ "stage": "restyle",
+ "items": [
+  {
+   "name": "rs_1ride_45",
+   "image": "rs/C2pixart_1ride_s204.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. dawn after rain, a waterfall from a rocky gorge into a green meadow, one lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle on a road",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.45,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_1ride_60",
+   "image": "rs/C2pixart_1ride_s204.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. dawn after rain, a waterfall from a rocky gorge into a green meadow, one lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle on a road",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.6,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_2night_45",
+   "image": "rs/C2pixart_2night_s211.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. dark blue night, ruined street with collapsed concrete slabs, destroyed skyscrapers with broken tops, one motorcycle with red taillight, no lights",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.45,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_2night_60",
+   "image": "rs/C2pixart_2night_s211.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. dark blue night, ruined street with collapsed concrete slabs, destroyed skyscrapers with broken tops, one motorcycle with red taillight, no lights",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.6,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_3liberty_45",
+   "image": "rs/C2pixart_3liberty_s221.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. blue hour, the broken giant head of the Statue of Liberty lies in the harbour water, destroyed collapsed skyscrapers with broken tops on the far shore, one lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.45,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_3liberty_60",
+   "image": "rs/C2pixart_3liberty_s221.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. blue hour, the broken giant head of the Statue of Liberty lies in the harbour water, destroyed collapsed skyscrapers with broken tops on the far shore, one lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.6,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_4bay_45",
+   "image": "rs/C2pixart_4bay_s231.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. golden hour, one lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road by a calm bay, glowing sea grass",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.45,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "rs_4bay_60",
+   "image": "rs/C2pixart_4bay_s231.jpg",
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean ink lines, vivid saturated colors, cinematic composition. golden hour, one lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road by a calm bay, glowing sea grass",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "strength": 0.6,
+   "seeds": [
+    7,
+    8
+   ]
+  }
+ ]
+}

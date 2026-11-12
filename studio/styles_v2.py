@@ -18,6 +18,21 @@ import torch, numpy as np
 from PIL import Image
 T0 = time.time()
 
+if STAGE == 'restyle':
+    # перерисовка в утверждённый вид поверх готовой раскладки (кадр PixArt держит сюжет, SDXL даёт графику с тушью)
+    # job: {"stage":"restyle","strength":0.55,"items":[{"name","image","prompt","negative","seeds":[..]}]}
+    from diffusers import StableDiffusionXLImg2ImgPipeline, AutoencoderKL
+    vae = AutoencoderKL.from_pretrained('madebyollin/sdxl-vae-fp16-fix', torch_dtype=torch.float16)
+    pipe = StableDiffusionXLImg2ImgPipeline.from_pretrained('stabilityai/stable-diffusion-xl-base-1.0', vae=vae, torch_dtype=torch.float16, variant='fp16').to('cuda')
+    for it in job['items']:
+        img = Image.open(os.path.join(D, it['image'])).convert('RGB')
+        for seed in it.get('seeds', [1]):
+            t0 = time.time()
+            out = pipe(prompt=it['prompt'], negative_prompt=it.get('negative', job.get('negative', '')), image=img, strength=it.get('strength', job.get('strength', 0.55)),
+                       num_inference_steps=job.get('steps', 34), guidance_scale=it.get('cfg', 7.0), generator=torch.Generator('cuda').manual_seed(seed)).images[0]
+            out.save(os.path.join(OUT, f"{it['name']}_r{seed}.png")); log('restyle', it['name'], seed, round(time.time() - t0, 1), 's')
+    log('RESTYLE DONE', round(time.time() - T0), 's'); sys.exit(0)
+
 if STAGE == 'fix':
     # точечная правка: перерисовать только область по маске (колесо, нога, лишняя статуя), остальной кадр не трогается
     # job: {"stage":"fix","fixes":[{"name","image","mask","prompt","negative","strength","seeds":[..]}]}  маска: белое = перерисовать
