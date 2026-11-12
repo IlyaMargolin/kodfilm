@@ -1,0 +1,9 @@
+control anim_70e60 21 41.4 s
+control anim_70e60 22 40.1 s
+control anim_70e60 23 45.8 s
+control anim_70e60 24 45.4 s
+control anim_85e75 21 46.2 s
+control anim_85e75 22 45.2 s
+control anim_85e75 23 45.6 s
+control anim_85e75 24 45.7 s
+CONTROL DONE 442 s
