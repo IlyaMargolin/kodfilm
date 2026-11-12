@@ -1,0 +1,120 @@
+{
+ "stage": "key",
+ "w": 1344,
+ "h": 768,
+ "steps": 34,
+ "styles": [
+  {
+   "name": "C2sdxl_1ride",
+   "model": "stabilityai/stable-diffusion-xl-base-1.0",
+   "steps": 34,
+   "cfg": 7.0,
+   "seeds": [
+    201,
+    202,
+    203,
+    204
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. dawn after rain in the mountains, a waterfall pours out of a narrow rocky gorge into a flooded green meadow, rows of apple trees standing in still flood water, an old road runs along the cliff above, far away a lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle, warm sun rays through mist",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, people, crowd, city, buildings"
+  },
+  {
+   "name": "C2sdxl_2night",
+   "model": "stabilityai/stable-diffusion-xl-base-1.0",
+   "steps": 34,
+   "cfg": 7.0,
+   "seeds": [
+    211,
+    212,
+    213,
+    214
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. dark blue moonless night, total darkness, no lights anywhere, ruined Manhattan street, broken concrete slabs lying across the road, one motorcycle headlight beam cutting through haze, red taillight glow reflected in puddles, black silhouettes of dead skyscrapers",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, sunset, sun, daylight, orange sky, red sky, street lights, lit windows, neon, people"
+  },
+  {
+   "name": "C2sdxl_3liberty",
+   "model": "stabilityai/stable-diffusion-xl-base-1.0",
+   "steps": 34,
+   "cfg": 7.0,
+   "seeds": [
+    221,
+    222,
+    223,
+    224
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. blue hour before dawn, the giant broken head of the Statue of Liberty with its green copper face and spiked crown lies on rubble on a small island across calm misty harbour water, in the foreground a lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind standing at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, sunset, sun, full statue, standing statue, people, crowd"
+  },
+  {
+   "name": "C2sdxl_4bay",
+   "model": "stabilityai/stable-diffusion-xl-base-1.0",
+   "steps": 34,
+   "cfg": 7.0,
+   "seeds": [
+    231,
+    232,
+    233,
+    234
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. golden hour, a lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road beside a calm bay, tall sea grass glowing in the low sun, sand spit, small figure in a vast landscape",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, people, crowd, city"
+  },
+  {
+   "name": "C2pixart_1ride",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    201,
+    202,
+    203,
+    204
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. dawn after rain in the mountains, a waterfall pours out of a narrow rocky gorge into a flooded green meadow, rows of apple trees standing in still flood water, an old road runs along the cliff above, far away a lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle, warm sun rays through mist",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, people, crowd, city, buildings"
+  },
+  {
+   "name": "C2pixart_2night",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    211,
+    212,
+    213,
+    214
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. dark blue moonless night, total darkness, no lights anywhere, ruined Manhattan street, broken concrete slabs lying across the road, one motorcycle headlight beam cutting through haze, red taillight glow reflected in puddles, black silhouettes of dead skyscrapers",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, sunset, sun, daylight, orange sky, red sky, street lights, lit windows, neon, people"
+  },
+  {
+   "name": "C2pixart_3liberty",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    221,
+    222,
+    223,
+    224
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. blue hour before dawn, the giant broken head of the Statue of Liberty with its green copper face and spiked crown lies on rubble on a small island across calm misty harbour water, in the foreground a lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind standing at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, sunset, sun, full statue, standing statue, people, crowd"
+  },
+  {
+   "name": "C2pixart_4bay",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    231,
+    232,
+    233,
+    234
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. golden hour, a lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road beside a calm bay, tall sea grass glowing in the low sun, sand spit, small figure in a vast landscape",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, green jacket, people, crowd, city"
+  }
+ ]
+}

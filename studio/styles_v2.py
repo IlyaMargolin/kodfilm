@@ -20,14 +20,24 @@ T0 = time.time()
 
 if STAGE == 'key':
     from diffusers import StableDiffusionXLPipeline, AutoencoderKL
-    vae = AutoencoderKL.from_pretrained('madebyollin/sdxl-vae-fp16-fix', torch_dtype=torch.float16)
-    pipe = StableDiffusionXLPipeline.from_pretrained(job.get('model', 'stabilityai/stable-diffusion-xl-base-1.0'), vae=vae, torch_dtype=torch.float16, variant='fp16').to('cuda')
     W, H = job.get('w', 1344), job.get('h', 768)
+    def load(mid):
+        # PixArt-Sigma (T5): точнее слушается длинного описания сцены; SDXL: красивее фактура
+        if 'PixArt' in mid:
+            from diffusers import PixArtSigmaPipeline
+            p = PixArtSigmaPipeline.from_pretrained(mid, torch_dtype=torch.float16); p.enable_model_cpu_offload(); return p
+        vae = AutoencoderKL.from_pretrained('madebyollin/sdxl-vae-fp16-fix', torch_dtype=torch.float16)
+        return StableDiffusionXLPipeline.from_pretrained(mid, vae=vae, torch_dtype=torch.float16, variant='fp16').to('cuda')
+    pipe, cur = None, None
     for st in job['styles']:
+        mid = st.get('model', job.get('model', 'stabilityai/stable-diffusion-xl-base-1.0'))
+        if mid != cur:
+            if pipe is not None: del pipe; gc.collect(); torch.cuda.empty_cache()
+            pipe, cur = load(mid), mid; log('model', mid)
         for seed in st.get('seeds', [1, 2, 3, 4]):
             t0 = time.time()
             img = pipe(prompt=st['prompt'], negative_prompt=st.get('negative', job.get('negative', '')), width=W, height=H,
-                       num_inference_steps=job.get('steps', 34), guidance_scale=st.get('cfg', 6.5), generator=torch.Generator('cuda').manual_seed(seed)).images[0]
+                       num_inference_steps=st.get('steps', job.get('steps', 34)), guidance_scale=st.get('cfg', 6.5), generator=torch.Generator('cuda').manual_seed(seed)).images[0]
             img.save(os.path.join(OUT, f"{st['name']}_s{seed}.png")); log('key', st['name'], seed, round(time.time() - t0, 1), 's')
     del pipe; gc.collect(); torch.cuda.empty_cache()
     from transformers import pipeline
