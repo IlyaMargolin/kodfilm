@@ -1,0 +1,93 @@
+{
+ "stage": "control",
+ "items": [
+  {
+   "name": "cn_1ride_50",
+   "depth": "rs/C2pixart_1ride_s204_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. dawn after rain, a waterfall from a rocky gorge into a green meadow, one lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle on a road",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.5,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_1ride_70",
+   "depth": "rs/C2pixart_1ride_s204_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. dawn after rain, a waterfall from a rocky gorge into a green meadow, one lone rider in a white full-face motorcycle helmet and a light beige short jacket on a motorcycle on a road",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.7,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_2night_50",
+   "depth": "rs/C2pixart_2night_s211_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. dark blue night, ruined street with collapsed concrete slabs, destroyed skyscrapers with broken tops, one motorcycle with red taillight, no lights",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.5,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_2night_70",
+   "depth": "rs/C2pixart_2night_s211_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. dark blue night, ruined street with collapsed concrete slabs, destroyed skyscrapers with broken tops, one motorcycle with red taillight, no lights",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.7,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_3liberty_50",
+   "depth": "rs/C2pixart_3liberty_s221_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. blue hour, the broken giant head of the Statue of Liberty lies in the harbour water, destroyed collapsed skyscrapers with broken tops on the far shore, one lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.5,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_3liberty_70",
+   "depth": "rs/C2pixart_3liberty_s221_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. blue hour, the broken giant head of the Statue of Liberty lies in the harbour water, destroyed collapsed skyscrapers with broken tops on the far shore, one lone rider in a white full-face motorcycle helmet and a light beige short jacket seen from behind at a rusty railing",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.7,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_4bay_50",
+   "depth": "rs/C2pixart_4bay_s231_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. golden hour, one lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road by a calm bay, glowing sea grass",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.5,
+   "seeds": [
+    7,
+    8
+   ]
+  },
+  {
+   "name": "cn_4bay_70",
+   "depth": "rs/C2pixart_4bay_s231_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, flat cel shading, hand painted background, vivid saturated colors, cinematic composition. golden hour, one lone rider in a white full-face motorcycle helmet and a light beige short jacket rides a motorcycle along an empty coastal road by a calm bay, glowing sea grass",
+   "negative": "photo, photorealistic, 3d render, text, letters, watermark, signature, logo, lowres, blurry, deformed, two statues, duplicate statue, second statue, second person, two people, crowd, intact skyscrapers, lit windows, city lights, extra wheels, broken motorcycle, extra limbs",
+   "scale": 0.7,
+   "seeds": [
+    7,
+    8
+   ]
+  }
+ ]
+}

@@ -18,6 +18,25 @@ import torch, numpy as np
 from PIL import Image
 T0 = time.time()
 
+if STAGE == 'control':
+    # рисуем заново в утверждённом виде (SDXL), а расстановку берём из раскладки через карту глубины (ControlNet depth)
+    # job: {"stage":"control","scale":0.6,"items":[{"name","depth","prompt","negative","seeds":[..]}]}
+    from diffusers import StableDiffusionXLControlNetPipeline, ControlNetModel, AutoencoderKL
+    cn = ControlNetModel.from_pretrained('diffusers/controlnet-depth-sdxl-1.0', torch_dtype=torch.float16, variant='fp16')
+    vae = AutoencoderKL.from_pretrained('madebyollin/sdxl-vae-fp16-fix', torch_dtype=torch.float16)
+    pipe = StableDiffusionXLControlNetPipeline.from_pretrained('stabilityai/stable-diffusion-xl-base-1.0', controlnet=cn, vae=vae, torch_dtype=torch.float16, variant='fp16').to('cuda')
+    W, H = job.get('w', 1344), job.get('h', 768)
+    for it in job['items']:
+        d = np.asarray(Image.open(os.path.join(D, it['depth'])), np.float32); d = (d - d.min()) / max(1e-6, d.max() - d.min())
+        ctl = Image.fromarray((d * 255).astype(np.uint8)).convert('RGB').resize((W, H))
+        for seed in it.get('seeds', [1]):
+            t0 = time.time()
+            out = pipe(prompt=it['prompt'], negative_prompt=it.get('negative', job.get('negative', '')), image=ctl, width=W, height=H,
+                       controlnet_conditioning_scale=it.get('scale', job.get('scale', 0.6)), num_inference_steps=job.get('steps', 34),
+                       guidance_scale=it.get('cfg', 7.0), generator=torch.Generator('cuda').manual_seed(seed)).images[0]
+            out.save(os.path.join(OUT, f"{it['name']}_c{seed}.png")); log('control', it['name'], seed, round(time.time() - t0, 1), 's')
+    log('CONTROL DONE', round(time.time() - T0), 's'); sys.exit(0)
+
 if STAGE == 'restyle':
     # перерисовка в утверждённый вид поверх готовой раскладки (кадр PixArt держит сюжет, SDXL даёт графику с тушью)
     # job: {"stage":"restyle","strength":0.55,"items":[{"name","image","prompt","negative","seeds":[..]}]}
