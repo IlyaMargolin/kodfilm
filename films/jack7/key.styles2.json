@@ -1,0 +1,141 @@
+{
+ "stage": "key",
+ "w": 1344,
+ "h": 768,
+ "steps": 34,
+ "negative": "photo, photograph, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, jpeg artifacts, deformed, extra wheels, duplicate, ugly",
+ "styles": [
+  {
+   "name": "A_gouache_1ride",
+   "seeds": [
+    101,
+    102,
+    103,
+    104
+   ],
+   "prompt": "painterly 2D animated film keyframe, hand painted gouache illustration, visible confident brush strokes, rich saturated colors, bold simple shapes, dramatic cinematic lighting, high-end animated feature concept art, masterpiece. a lone motorcyclist wearing a pale angular full-face helmet with a blue-green visor stripe, short light jacket with dark panels, dark trousers, light tall boots, riding a rugged motorcycle with a round headlight and a jerrycan on the right side, along an old wet mountain road on a high cliff ledge, below a river pours from a gorge into a flooded meadow with a drowned apple orchard, dawn after rain, warm low sun rays through mist, wide shot, motorcyclist small in frame",
+   "negative": "photo, photograph, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, jpeg artifacts, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "A_gouache_2night",
+   "seeds": [
+    111,
+    112,
+    113,
+    114
+   ],
+   "prompt": "painterly 2D animated film keyframe, hand painted gouache illustration, visible confident brush strokes, rich saturated colors, bold simple shapes, dramatic cinematic lighting, high-end animated feature concept art, masterpiece. night in a ruined empty Manhattan street, collapsed building facade slabs lying across the lanes, a lone motorcycle with a single round headlight beam cutting through haze, red taillight reflected in shallow water on the asphalt, no city lights at all, dark skyscrapers against a deep blue night sky, low angle wide shot",
+   "negative": "photo, photograph, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, jpeg artifacts, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "A_gouache_3liberty",
+   "seeds": [
+    121,
+    122,
+    123,
+    124
+   ],
+   "prompt": "painterly 2D animated film keyframe, hand painted gouache illustration, visible confident brush strokes, rich saturated colors, bold simple shapes, dramatic cinematic lighting, high-end animated feature concept art, masterpiece. seen from behind, a man in a pale full-face motorcycle helmet with the visor raised stands at a rusty harbor railing at blue hour before dawn, across the calm water on an island the colossal broken head of the Statue of Liberty with its green copper crown rests on rubble of its pedestal, mist over the water, quiet, melancholic, wide cinematic composition",
+   "negative": "photo, photograph, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, jpeg artifacts, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "A_gouache_4bay",
+   "seeds": [
+    131,
+    132,
+    133,
+    134
+   ],
+   "prompt": "painterly 2D animated film keyframe, hand painted gouache illustration, visible confident brush strokes, rich saturated colors, bold simple shapes, dramatic cinematic lighting, high-end animated feature concept art, masterpiece. golden hour, a lone motorcyclist rides along an empty coastal highway beside a calm bay, long shadows, tall sea grass with tips glowing in the low sun, the sea and a sand spit, warm orange sky, small figure in a vast landscape, cinematic wide shot",
+   "negative": "photo, photograph, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, jpeg artifacts, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "B_lineclaire_1ride",
+   "seeds": [
+    101,
+    102,
+    103,
+    104
+   ],
+   "prompt": "ligne claire graphic novel panel, clean confident black ink outlines, flat cel colors with subtle gradients, vivid limited palette, european bande dessinee illustration, crisp detailed background, cinematic framing, masterpiece. a lone motorcyclist wearing a pale angular full-face helmet with a blue-green visor stripe, short light jacket with dark panels, dark trousers, light tall boots, riding a rugged motorcycle with a round headlight and a jerrycan on the right side, along an old wet mountain road on a high cliff ledge, below a river pours from a gorge into a flooded meadow with a drowned apple orchard, dawn after rain, warm low sun rays through mist, wide shot, motorcyclist small in frame",
+   "negative": "photo, photorealistic, 3d render, cgi, painting, brush strokes, text, speech bubble, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "B_lineclaire_2night",
+   "seeds": [
+    111,
+    112,
+    113,
+    114
+   ],
+   "prompt": "ligne claire graphic novel panel, clean confident black ink outlines, flat cel colors with subtle gradients, vivid limited palette, european bande dessinee illustration, crisp detailed background, cinematic framing, masterpiece. night in a ruined empty Manhattan street, collapsed building facade slabs lying across the lanes, a lone motorcycle with a single round headlight beam cutting through haze, red taillight reflected in shallow water on the asphalt, no city lights at all, dark skyscrapers against a deep blue night sky, low angle wide shot",
+   "negative": "photo, photorealistic, 3d render, cgi, painting, brush strokes, text, speech bubble, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "B_lineclaire_3liberty",
+   "seeds": [
+    121,
+    122,
+    123,
+    124
+   ],
+   "prompt": "ligne claire graphic novel panel, clean confident black ink outlines, flat cel colors with subtle gradients, vivid limited palette, european bande dessinee illustration, crisp detailed background, cinematic framing, masterpiece. seen from behind, a man in a pale full-face motorcycle helmet with the visor raised stands at a rusty harbor railing at blue hour before dawn, across the calm water on an island the colossal broken head of the Statue of Liberty with its green copper crown rests on rubble of its pedestal, mist over the water, quiet, melancholic, wide cinematic composition",
+   "negative": "photo, photorealistic, 3d render, cgi, painting, brush strokes, text, speech bubble, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "B_lineclaire_4bay",
+   "seeds": [
+    131,
+    132,
+    133,
+    134
+   ],
+   "prompt": "ligne claire graphic novel panel, clean confident black ink outlines, flat cel colors with subtle gradients, vivid limited palette, european bande dessinee illustration, crisp detailed background, cinematic framing, masterpiece. golden hour, a lone motorcyclist rides along an empty coastal highway beside a calm bay, long shadows, tall sea grass with tips glowing in the low sun, the sea and a sand spit, warm orange sky, small figure in a vast landscape, cinematic wide shot",
+   "negative": "photo, photorealistic, 3d render, cgi, painting, brush strokes, text, speech bubble, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly"
+  },
+  {
+   "name": "C_animefeature_1ride",
+   "seeds": [
+    101,
+    102,
+    103,
+    104
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment with luminous light and glowing atmosphere, cel shaded character with clean lines, vivid saturated colors, sparkling light, detailed clouds, cinematic composition, masterpiece. a lone motorcyclist wearing a pale angular full-face helmet with a blue-green visor stripe, short light jacket with dark panels, dark trousers, light tall boots, riding a rugged motorcycle with a round headlight and a jerrycan on the right side, along an old wet mountain road on a high cliff ledge, below a river pours from a gorge into a flooded meadow with a drowned apple orchard, dawn after rain, warm low sun rays through mist, wide shot, motorcyclist small in frame",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi"
+  },
+  {
+   "name": "C_animefeature_2night",
+   "seeds": [
+    111,
+    112,
+    113,
+    114
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment with luminous light and glowing atmosphere, cel shaded character with clean lines, vivid saturated colors, sparkling light, detailed clouds, cinematic composition, masterpiece. night in a ruined empty Manhattan street, collapsed building facade slabs lying across the lanes, a lone motorcycle with a single round headlight beam cutting through haze, red taillight reflected in shallow water on the asphalt, no city lights at all, dark skyscrapers against a deep blue night sky, low angle wide shot",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi"
+  },
+  {
+   "name": "C_animefeature_3liberty",
+   "seeds": [
+    121,
+    122,
+    123,
+    124
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment with luminous light and glowing atmosphere, cel shaded character with clean lines, vivid saturated colors, sparkling light, detailed clouds, cinematic composition, masterpiece. seen from behind, a man in a pale full-face motorcycle helmet with the visor raised stands at a rusty harbor railing at blue hour before dawn, across the calm water on an island the colossal broken head of the Statue of Liberty with its green copper crown rests on rubble of its pedestal, mist over the water, quiet, melancholic, wide cinematic composition",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi"
+  },
+  {
+   "name": "C_animefeature_4bay",
+   "seeds": [
+    131,
+    132,
+    133,
+    134
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment with luminous light and glowing atmosphere, cel shaded character with clean lines, vivid saturated colors, sparkling light, detailed clouds, cinematic composition, masterpiece. golden hour, a lone motorcyclist rides along an empty coastal highway beside a calm bay, long shadows, tall sea grass with tips glowing in the low sun, the sea and a sand spit, warm orange sky, small figure in a vast landscape, cinematic wide shot",
+   "negative": "photo, photorealistic, 3d render, cgi, text, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi"
+  }
+ ]
+}
