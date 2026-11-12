@@ -1,0 +1,7 @@
+control blk_bay_60 11 44.6 s
+control blk_bay_60 12 40.8 s
+control blk_bay_60 13 40.7 s
+control blk_bay_80 11 40.8 s
+control blk_bay_80 12 40.6 s
+control blk_bay_80 13 40.6 s
+CONTROL DONE 335 s
