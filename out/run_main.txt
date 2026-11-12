@@ -1,0 +1,164 @@
+model PixArt-alpha/PixArt-Sigma-XL-2-1024-MS
+key j029 1087 61.3 s
+key j029 1088 42.0 s
+key j029 1089 43.5 s
+key j030 1090 44.1 s
+key j030 1091 44.0 s
+key j030 1092 43.9 s
+key j031 1093 43.8 s
+key j031 1094 43.9 s
+key j031 1095 43.9 s
+key j032 1096 43.9 s
+key j032 1097 44.0 s
+key j032 1098 43.9 s
+key j033 1099 43.8 s
+key j033 1100 44.0 s
+key j033 1101 44.0 s
+key j034 1102 43.8 s
+key j034 1103 43.9 s
+key j034 1104 43.8 s
+key j035 1105 43.8 s
+key j035 1106 43.6 s
+key j035 1107 43.7 s
+key j036 1108 43.8 s
+key j036 1109 44.0 s
+key j036 1110 43.5 s
+key j037 1111 43.5 s
+key j037 1112 43.5 s
+key j037 1113 43.7 s
+key j038 1114 43.7 s
+key j038 1115 43.7 s
+key j038 1116 43.7 s
+key j039 1117 43.8 s
+key j039 1118 43.6 s
+key j039 1119 43.6 s
+key j040 1120 43.6 s
+key j040 1121 43.5 s
+key j040 1122 43.4 s
+key j041 1123 43.4 s
+key j041 1124 43.4 s
+key j041 1125 43.5 s
+key j042 1126 43.5 s
+key j042 1127 43.5 s
+key j042 1128 43.6 s
+key j043 1129 43.5 s
+key j043 1130 43.5 s
+key j043 1131 43.6 s
+key j044 1132 43.6 s
+key j044 1133 43.6 s
+key j044 1134 43.7 s
+key j045 1135 43.4 s
+key j045 1136 43.6 s
+key j045 1137 43.7 s
+key j046 1138 43.6 s
+key j046 1139 43.6 s
+key j046 1140 43.6 s
+key j047 1141 43.7 s
+key j047 1142 43.5 s
+key j047 1143 43.6 s
+key j048 1144 43.5 s
+key j048 1145 43.5 s
+key j048 1146 43.5 s
+key j049 1147 43.6 s
+key j049 1148 43.6 s
+key j049 1149 43.7 s
+key j050 1150 43.7 s
+key j050 1151 43.8 s
+key j050 1152 43.7 s
+key j051 1153 43.7 s
+key j051 1154 43.5 s
+key j051 1155 43.5 s
+key j052 1156 43.7 s
+key j052 1157 43.5 s
+key j052 1158 43.5 s
+key j053 1159 43.7 s
+key j053 1160 43.5 s
+key j053 1161 43.5 s
+key j054 1162 43.5 s
+key j054 1163 43.6 s
+key j054 1164 43.5 s
+key j055 1165 43.6 s
+key j055 1166 43.6 s
+key j055 1167 43.7 s
+depth j029_s1087.png
+depth j029_s1088.png
+depth j029_s1089.png
+depth j030_s1090.png
+depth j030_s1091.png
+depth j030_s1092.png
+depth j031_s1093.png
+depth j031_s1094.png
+depth j031_s1095.png
+depth j032_s1096.png
+depth j032_s1097.png
+depth j032_s1098.png
+depth j033_s1099.png
+depth j033_s1100.png
+depth j033_s1101.png
+depth j034_s1102.png
+depth j034_s1103.png
+depth j034_s1104.png
+depth j035_s1105.png
+depth j035_s1106.png
+depth j035_s1107.png
+depth j036_s1108.png
+depth j036_s1109.png
+depth j036_s1110.png
+depth j037_s1111.png
+depth j037_s1112.png
+depth j037_s1113.png
+depth j038_s1114.png
+depth j038_s1115.png
+depth j038_s1116.png
+depth j039_s1117.png
+depth j039_s1118.png
+depth j039_s1119.png
+depth j040_s1120.png
+depth j040_s1121.png
+depth j040_s1122.png
+depth j041_s1123.png
+depth j041_s1124.png
+depth j041_s1125.png
+depth j042_s1126.png
+depth j042_s1127.png
+depth j042_s1128.png
+depth j043_s1129.png
+depth j043_s1130.png
+depth j043_s1131.png
+depth j044_s1132.png
+depth j044_s1133.png
+depth j044_s1134.png
+depth j045_s1135.png
+depth j045_s1136.png
+depth j045_s1137.png
+depth j046_s1138.png
+depth j046_s1139.png
+depth j046_s1140.png
+depth j047_s1141.png
+depth j047_s1142.png
+depth j047_s1143.png
+depth j048_s1144.png
+depth j048_s1145.png
+depth j048_s1146.png
+depth j049_s1147.png
+depth j049_s1148.png
+depth j049_s1149.png
+depth j050_s1150.png
+depth j050_s1151.png
+depth j050_s1152.png
+depth j051_s1153.png
+depth j051_s1154.png
+depth j051_s1155.png
+depth j052_s1156.png
+depth j052_s1157.png
+depth j052_s1158.png
+depth j053_s1159.png
+depth j053_s1160.png
+depth j053_s1161.png
+depth j054_s1162.png
+depth j054_s1163.png
+depth j054_s1164.png
+depth j055_s1165.png
+depth j055_s1166.png
+depth j055_s1167.png
+KEY DONE 3842 s
