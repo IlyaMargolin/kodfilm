@@ -1,0 +1,13 @@
+control blk2_60e60 11 45.0 s
+control blk2_60e60 12 47.8 s
+control blk2_60e60 13 54.4 s
+control blk2_60e60 14 52.1 s
+control blk2_80e50 11 52.5 s
+control blk2_80e50 12 53.0 s
+control blk2_80e50 13 52.3 s
+control blk2_80e50 14 52.8 s
+control blk2_70e75 11 52.3 s
+control blk2_70e75 12 52.7 s
+control blk2_70e75 13 52.3 s
+control blk2_70e75 14 52.2 s
+CONTROL DONE 714 s
