@@ -18,6 +18,27 @@ import torch, numpy as np
 from PIL import Image
 T0 = time.time()
 
+if STAGE == 'fix':
+    # точечная правка: перерисовать только область по маске (колесо, нога, лишняя статуя), остальной кадр не трогается
+    # job: {"stage":"fix","fixes":[{"name","image","mask","prompt","negative","strength","seeds":[..]}]}  маска: белое = перерисовать
+    from diffusers import AutoPipelineForInpainting
+    pipe = AutoPipelineForInpainting.from_pretrained('diffusers/stable-diffusion-xl-1.0-inpainting-0.1', torch_dtype=torch.float16, variant='fp16').to('cuda')
+    for fx in job['fixes']:
+        img = Image.open(os.path.join(D, fx['image'])).convert('RGB'); W0, H0 = img.size
+        W, H = (W0 // 8) * 8, (H0 // 8) * 8; img = img.resize((W, H)); m = Image.open(os.path.join(D, fx['mask'])).convert('L').resize((W, H))
+        for seed in fx.get('seeds', [1, 2]):
+            t0 = time.time()
+            out = pipe(prompt=fx['prompt'], negative_prompt=fx.get('negative', job.get('negative', '')), image=img, mask_image=m, width=W, height=H,
+                       strength=fx.get('strength', 0.9), num_inference_steps=fx.get('steps', 30), guidance_scale=fx.get('cfg', 7.0),
+                       generator=torch.Generator('cuda').manual_seed(seed)).images[0]
+            # склейка по размытой маске: вне маски пиксели исходного кадра
+            import numpy as np
+            from PIL import ImageFilter
+            a = np.asarray(m.filter(ImageFilter.GaussianBlur(6)), np.float32)[..., None] / 255
+            res = (np.asarray(out.resize((W, H)), np.float32) * a + np.asarray(img, np.float32) * (1 - a)).astype(np.uint8)
+            Image.fromarray(res).resize((W0, H0)).save(os.path.join(OUT, f"{fx['name']}_fix{seed}.png")); log('fix', fx['name'], seed, round(time.time() - t0, 1), 's')
+    log('FIX DONE', round(time.time() - T0), 's'); sys.exit(0)
+
 if STAGE == 'key':
     from diffusers import StableDiffusionXLPipeline, AutoencoderKL
     W, H = job.get('w', 1344), job.get('h', 768)
