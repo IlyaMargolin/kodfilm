@@ -32,7 +32,7 @@ if STAGE == 'control':
         for seed in it.get('seeds', [1]):
             t0 = time.time()
             out = pipe(prompt=it['prompt'], negative_prompt=it.get('negative', job.get('negative', '')), image=ctl, width=W, height=H,
-                       controlnet_conditioning_scale=it.get('scale', job.get('scale', 0.6)), num_inference_steps=job.get('steps', 34),
+                       controlnet_conditioning_scale=it.get('scale', job.get('scale', 0.6)), control_guidance_end=it.get('end', job.get('end', 1.0)), num_inference_steps=job.get('steps', 34),
                        guidance_scale=it.get('cfg', 7.0), generator=torch.Generator('cuda').manual_seed(seed)).images[0]
             out.save(os.path.join(OUT, f"{it['name']}_c{seed}.png")); log('control', it['name'], seed, round(time.time() - t0, 1), 's')
     log('CONTROL DONE', round(time.time() - T0), 's'); sys.exit(0)

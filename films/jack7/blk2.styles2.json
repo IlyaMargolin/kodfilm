@@ -1,0 +1,47 @@
+{
+ "stage": "control",
+ "items": [
+  {
+   "name": "blk2_60e60",
+   "depth": "blk/bay2_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, cel shading, lush hand painted background, rich saturated colors, cinematic composition. golden hour, a lone rider seen from behind riding an old motorcycle along an empty coastal road, pure white full-face helmet, light beige short jacket with dark inserts, dark trousers, tall light boots, red taillight, a dark bag on the left side and a jerrycan on the right side, calm sea bay on the left with sparkling sunset reflections on the water, tall dry golden grass and wildflowers along the road, rocks at the water edge, layered distant hills, big glowing clouds",
+   "negative": "photo, photorealistic, 3d render, cgi, clay, text, letters, watermark, signature, logo, lowres, blurry, deformed, second person, two people, crowd, extra wheels, broken motorcycle, extra limbs, buildings, city, tower, lighthouse, red helmet, black helmet, green jacket, red jacket",
+   "scale": 0.6,
+   "end": 0.6,
+   "seeds": [
+    11,
+    12,
+    13,
+    14
+   ]
+  },
+  {
+   "name": "blk2_80e50",
+   "depth": "blk/bay2_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, cel shading, lush hand painted background, rich saturated colors, cinematic composition. golden hour, a lone rider seen from behind riding an old motorcycle along an empty coastal road, pure white full-face helmet, light beige short jacket with dark inserts, dark trousers, tall light boots, red taillight, a dark bag on the left side and a jerrycan on the right side, calm sea bay on the left with sparkling sunset reflections on the water, tall dry golden grass and wildflowers along the road, rocks at the water edge, layered distant hills, big glowing clouds",
+   "negative": "photo, photorealistic, 3d render, cgi, clay, text, letters, watermark, signature, logo, lowres, blurry, deformed, second person, two people, crowd, extra wheels, broken motorcycle, extra limbs, buildings, city, tower, lighthouse, red helmet, black helmet, green jacket, red jacket",
+   "scale": 0.8,
+   "end": 0.5,
+   "seeds": [
+    11,
+    12,
+    13,
+    14
+   ]
+  },
+  {
+   "name": "blk2_70e75",
+   "depth": "blk/bay2_depth.png",
+   "prompt": "graphic anime illustration with bold black ink outlines, cel shading, lush hand painted background, rich saturated colors, cinematic composition. golden hour, a lone rider seen from behind riding an old motorcycle along an empty coastal road, pure white full-face helmet, light beige short jacket with dark inserts, dark trousers, tall light boots, red taillight, a dark bag on the left side and a jerrycan on the right side, calm sea bay on the left with sparkling sunset reflections on the water, tall dry golden grass and wildflowers along the road, rocks at the water edge, layered distant hills, big glowing clouds",
+   "negative": "photo, photorealistic, 3d render, cgi, clay, text, letters, watermark, signature, logo, lowres, blurry, deformed, second person, two people, crowd, extra wheels, broken motorcycle, extra limbs, buildings, city, tower, lighthouse, red helmet, black helmet, green jacket, red jacket",
+   "scale": 0.7,
+   "end": 0.75,
+   "seeds": [
+    11,
+    12,
+    13,
+    14
+   ]
+  }
+ ]
+}
