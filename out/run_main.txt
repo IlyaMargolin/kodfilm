@@ -1,0 +1,17 @@
+control cn_1ride_50 7 43.8 s
+control cn_1ride_50 8 41.0 s
+control cn_1ride_70 7 44.5 s
+control cn_1ride_70 8 44.1 s
+control cn_2night_50 7 44.4 s
+control cn_2night_50 8 44.0 s
+control cn_2night_70 7 44.2 s
+control cn_2night_70 8 44.4 s
+control cn_3liberty_50 7 44.2 s
+control cn_3liberty_50 8 44.3 s
+control cn_3liberty_70 7 43.9 s
+control cn_3liberty_70 8 44.3 s
+control cn_4bay_50 7 44.0 s
+control cn_4bay_50 8 44.0 s
+control cn_4bay_70 7 44.0 s
+control cn_4bay_70 8 44.2 s
+CONTROL DONE 789 s
