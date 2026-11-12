@@ -1,0 +1,67 @@
+model stabilityai/stable-diffusion-xl-base-1.0
+key C2sdxl_1ride 201 37.2 s
+key C2sdxl_1ride 202 28.6 s
+key C2sdxl_1ride 203 31.0 s
+key C2sdxl_1ride 204 30.6 s
+key C2sdxl_2night 211 30.0 s
+key C2sdxl_2night 212 30.7 s
+key C2sdxl_2night 213 30.5 s
+key C2sdxl_2night 214 30.2 s
+key C2sdxl_3liberty 221 30.3 s
+key C2sdxl_3liberty 222 30.3 s
+key C2sdxl_3liberty 223 30.5 s
+key C2sdxl_3liberty 224 30.6 s
+key C2sdxl_4bay 231 30.4 s
+key C2sdxl_4bay 232 30.3 s
+key C2sdxl_4bay 233 30.3 s
+key C2sdxl_4bay 234 30.2 s
+model PixArt-alpha/PixArt-Sigma-XL-2-1024-MS
+key C2pixart_1ride 201 59.5 s
+key C2pixart_1ride 202 44.8 s
+key C2pixart_1ride 203 44.8 s
+key C2pixart_1ride 204 44.3 s
+key C2pixart_2night 211 44.8 s
+key C2pixart_2night 212 44.3 s
+key C2pixart_2night 213 44.5 s
+key C2pixart_2night 214 44.2 s
+key C2pixart_3liberty 221 44.1 s
+key C2pixart_3liberty 222 44.1 s
+key C2pixart_3liberty 223 43.8 s
+key C2pixart_3liberty 224 43.9 s
+key C2pixart_4bay 231 43.9 s
+key C2pixart_4bay 232 44.0 s
+key C2pixart_4bay 233 44.0 s
+key C2pixart_4bay 234 43.9 s
+depth C2pixart_1ride_s201.png
+depth C2pixart_1ride_s202.png
+depth C2pixart_1ride_s203.png
+depth C2pixart_1ride_s204.png
+depth C2pixart_2night_s211.png
+depth C2pixart_2night_s212.png
+depth C2pixart_2night_s213.png
+depth C2pixart_2night_s214.png
+depth C2pixart_3liberty_s221.png
+depth C2pixart_3liberty_s222.png
+depth C2pixart_3liberty_s223.png
+depth C2pixart_3liberty_s224.png
+depth C2pixart_4bay_s231.png
+depth C2pixart_4bay_s232.png
+depth C2pixart_4bay_s233.png
+depth C2pixart_4bay_s234.png
+depth C2sdxl_1ride_s201.png
+depth C2sdxl_1ride_s202.png
+depth C2sdxl_1ride_s203.png
+depth C2sdxl_1ride_s204.png
+depth C2sdxl_2night_s211.png
+depth C2sdxl_2night_s212.png
+depth C2sdxl_2night_s213.png
+depth C2sdxl_2night_s214.png
+depth C2sdxl_3liberty_s221.png
+depth C2sdxl_3liberty_s222.png
+depth C2sdxl_3liberty_s223.png
+depth C2sdxl_3liberty_s224.png
+depth C2sdxl_4bay_s231.png
+depth C2sdxl_4bay_s232.png
+depth C2sdxl_4bay_s233.png
+depth C2sdxl_4bay_s234.png
+KEY DONE 1507 s
