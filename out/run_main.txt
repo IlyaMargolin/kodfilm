@@ -1,0 +1,97 @@
+key A_gouache_1ride 101 33.0 s
+key A_gouache_1ride 102 31.8 s
+key A_gouache_1ride 103 35.0 s
+key A_gouache_1ride 104 36.5 s
+key A_gouache_2night 111 34.8 s
+key A_gouache_2night 112 35.8 s
+key A_gouache_2night 113 35.2 s
+key A_gouache_2night 114 35.6 s
+key A_gouache_3liberty 121 35.7 s
+key A_gouache_3liberty 122 35.5 s
+key A_gouache_3liberty 123 35.4 s
+key A_gouache_3liberty 124 35.3 s
+key A_gouache_4bay 131 35.4 s
+key A_gouache_4bay 132 35.7 s
+key A_gouache_4bay 133 35.6 s
+key A_gouache_4bay 134 35.5 s
+key B_lineclaire_1ride 101 35.5 s
+key B_lineclaire_1ride 102 35.7 s
+key B_lineclaire_1ride 103 35.5 s
+key B_lineclaire_1ride 104 35.3 s
+key B_lineclaire_2night 111 35.2 s
+key B_lineclaire_2night 112 35.4 s
+key B_lineclaire_2night 113 35.6 s
+key B_lineclaire_2night 114 35.6 s
+key B_lineclaire_3liberty 121 35.4 s
+key B_lineclaire_3liberty 122 35.6 s
+key B_lineclaire_3liberty 123 35.7 s
+key B_lineclaire_3liberty 124 35.4 s
+key B_lineclaire_4bay 131 35.2 s
+key B_lineclaire_4bay 132 35.2 s
+key B_lineclaire_4bay 133 35.5 s
+key B_lineclaire_4bay 134 35.6 s
+key C_animefeature_1ride 101 35.7 s
+key C_animefeature_1ride 102 35.6 s
+key C_animefeature_1ride 103 35.7 s
+key C_animefeature_1ride 104 35.6 s
+key C_animefeature_2night 111 35.3 s
+key C_animefeature_2night 112 35.2 s
+key C_animefeature_2night 113 35.5 s
+key C_animefeature_2night 114 35.7 s
+key C_animefeature_3liberty 121 35.4 s
+key C_animefeature_3liberty 122 35.3 s
+key C_animefeature_3liberty 123 35.2 s
+key C_animefeature_3liberty 124 35.4 s
+key C_animefeature_4bay 131 35.6 s
+key C_animefeature_4bay 132 35.7 s
+key C_animefeature_4bay 133 35.1 s
+key C_animefeature_4bay 134 35.2 s
+depth A_gouache_1ride_s101.png
+depth A_gouache_1ride_s102.png
+depth A_gouache_1ride_s103.png
+depth A_gouache_1ride_s104.png
+depth A_gouache_2night_s111.png
+depth A_gouache_2night_s112.png
+depth A_gouache_2night_s113.png
+depth A_gouache_2night_s114.png
+depth A_gouache_3liberty_s121.png
+depth A_gouache_3liberty_s122.png
+depth A_gouache_3liberty_s123.png
+depth A_gouache_3liberty_s124.png
+depth A_gouache_4bay_s131.png
+depth A_gouache_4bay_s132.png
+depth A_gouache_4bay_s133.png
+depth A_gouache_4bay_s134.png
+depth B_lineclaire_1ride_s101.png
+depth B_lineclaire_1ride_s102.png
+depth B_lineclaire_1ride_s103.png
+depth B_lineclaire_1ride_s104.png
+depth B_lineclaire_2night_s111.png
+depth B_lineclaire_2night_s112.png
+depth B_lineclaire_2night_s113.png
+depth B_lineclaire_2night_s114.png
+depth B_lineclaire_3liberty_s121.png
+depth B_lineclaire_3liberty_s122.png
+depth B_lineclaire_3liberty_s123.png
+depth B_lineclaire_3liberty_s124.png
+depth B_lineclaire_4bay_s131.png
+depth B_lineclaire_4bay_s132.png
+depth B_lineclaire_4bay_s133.png
+depth B_lineclaire_4bay_s134.png
+depth C_animefeature_1ride_s101.png
+depth C_animefeature_1ride_s102.png
+depth C_animefeature_1ride_s103.png
+depth C_animefeature_1ride_s104.png
+depth C_animefeature_2night_s111.png
+depth C_animefeature_2night_s112.png
+depth C_animefeature_2night_s113.png
+depth C_animefeature_2night_s114.png
+depth C_animefeature_3liberty_s121.png
+depth C_animefeature_3liberty_s122.png
+depth C_animefeature_3liberty_s123.png
+depth C_animefeature_3liberty_s124.png
+depth C_animefeature_4bay_s131.png
+depth C_animefeature_4bay_s132.png
+depth C_animefeature_4bay_s133.png
+depth C_animefeature_4bay_s134.png
+KEY DONE 1832 s
