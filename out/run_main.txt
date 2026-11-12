@@ -1,0 +1,17 @@
+restyle rs_1ride_45 7 18.5 s
+restyle rs_1ride_45 8 14.6 s
+restyle rs_1ride_60 7 19.8 s
+restyle rs_1ride_60 8 21.3 s
+restyle rs_2night_45 7 17.9 s
+restyle rs_2night_45 8 17.2 s
+restyle rs_2night_60 7 21.0 s
+restyle rs_2night_60 8 21.0 s
+restyle rs_3liberty_45 7 16.7 s
+restyle rs_3liberty_45 8 17.1 s
+restyle rs_3liberty_60 7 21.8 s
+restyle rs_3liberty_60 8 21.3 s
+restyle rs_4bay_45 7 16.5 s
+restyle rs_4bay_45 8 16.6 s
+restyle rs_4bay_60 7 21.5 s
+restyle rs_4bay_60 8 21.6 s
+RESTYLE DONE 373 s
