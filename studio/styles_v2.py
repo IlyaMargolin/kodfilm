@@ -24,7 +24,9 @@ if STAGE == 'control':
     from diffusers import StableDiffusionXLControlNetPipeline, ControlNetModel, AutoencoderKL
     cn = ControlNetModel.from_pretrained('diffusers/controlnet-depth-sdxl-1.0', torch_dtype=torch.float16, variant='fp16')
     vae = AutoencoderKL.from_pretrained('madebyollin/sdxl-vae-fp16-fix', torch_dtype=torch.float16)
-    pipe = StableDiffusionXLControlNetPipeline.from_pretrained('stabilityai/stable-diffusion-xl-base-1.0', controlnet=cn, vae=vae, torch_dtype=torch.float16, variant='fp16').to('cuda')
+    base = job.get('base', 'stabilityai/stable-diffusion-xl-base-1.0')   # можно взять дообученную SDXL (например, аниме-фоны)
+    kw = dict(variant='fp16') if base.startswith('stabilityai/') else {}
+    pipe = StableDiffusionXLControlNetPipeline.from_pretrained(base, controlnet=cn, vae=vae, torch_dtype=torch.float16, **kw).to('cuda')
     W, H = job.get('w', 1344), job.get('h', 768)
     for it in job['items']:
         d = np.asarray(Image.open(os.path.join(D, it['depth'])), np.float32); d = (d - d.min()) / max(1e-6, d.max() - d.min())
