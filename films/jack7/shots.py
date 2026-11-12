@@ -2,7 +2,7 @@
 # Каждый план: (сек, движение, что в кадре [EN-промпт], что видит зритель [RU], звук)
 # движение: P = «живая картина» 2.5D (камера по нарисованному кадру), W = Wan картинка→видео (вода, трава, звери, дым)
 import json, os
-JACK = "a lone rider in a pale angular full-face motorcycle helmet with a blue-green visor stripe, short light jacket with dark panels, dark trousers, light tall boots"
+JACK = "a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots"
 BIKE = "a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right"
 S = []
 def sc(name, tod, shots): S.append(dict(scene=name, tod=tod, shots=shots))

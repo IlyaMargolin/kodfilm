@@ -1,0 +1,462 @@
+{
+ "stage": "key",
+ "w": 1344,
+ "h": 768,
+ "styles": [
+  {
+   "name": "j056",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1168,
+    1169,
+    1170
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. coastal dam road, a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots stops a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right at a gap in sedge and dunes, open Atlantic horizon, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j057",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1171,
+    1172,
+    1173
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. sedge bends in a gust, stems follow with different delays, ocean beyond, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j058",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1174,
+    1175,
+    1176
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. extreme close up through a raised visor, a blue eye finds the open water, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j059",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1177,
+    1178,
+    1179
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a huge ray with glowing blue patches bursts out of an ocean wave and glides over the water, water sheets stream off its wings, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j060",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1180,
+    1181,
+    1182
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. the ray levitates low over the swell then slips back under, spray in the sun, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j061",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1183,
+    1184,
+    1185
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a faint smile in the eyes behind a raised visor, morning light",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j062",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1186,
+    1187,
+    1188
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. rain storm, a road ends at a washed-out concrete channel, a slope down into brown water, a raised steel ramp on a hinge above, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j063",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1189,
+    1190,
+    1191
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. old road arrow sign on a leaning pole points down to the flooded lower crossing, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j064",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1192,
+    1193,
+    1194
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a hand dips a wooden plank into shallow water, it taps on concrete below, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j065",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1195,
+    1196,
+    1197
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots aims a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right at the shallow crossing in heavy rain, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j066",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1198,
+    1199,
+    1200
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. brown water rushes from the side over the crossing, carrying sand, front tyre in the water, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j067",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1201,
+    1202,
+    1203
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. the concrete edge breaks under the front wheel, motorcycle tips over to the right into water, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j068",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1204,
+    1205,
+    1206
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a scratched visor in the water, rain drops, the headlight shining underwater, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j069",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1207,
+    1208,
+    1209
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. hands hook the blue stunt strap to the motorcycle frame and a ring on dry concrete, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j070",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1210,
+    1211,
+    1212
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots hauls the motorcycle up the slope with the strap tensioned, rain, mud, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j071",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1213,
+    1214,
+    1215
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots breathing, holding his right shoulder, rain on the helmet, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j072",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1216,
+    1217,
+    1218
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a manual winch with a chain and brake handle by the raised steel ramp, rain, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j073",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1219,
+    1220,
+    1221
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. the hinged steel ramp slowly lowers across the channel and lands on two concrete supports, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j074",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1222,
+    1223,
+    1224
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots walks across the ribbed steel ramp checking each step, rain, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j075",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1225,
+    1226,
+    1227
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right rolls across the lowered ramp over rushing water, heavy rain storm, grey sky",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j076",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1228,
+    1229,
+    1230
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. far side of the crossing, free road ahead, a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots on a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right ready to go, rain moving out over the ocean, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j077",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1231,
+    1232,
+    1233
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a thumb pressing the engine kill switch, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j078",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1234,
+    1235,
+    1236
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. from this side the lower crossing looks flat and safe, the upper ramp hidden behind concrete, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j079",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1237,
+    1238,
+    1239
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. hands take the arrow plate off a short pole and turn it to point to the upper ramp, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j080",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1240,
+    1241,
+    1242
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. wind turns the loose arrow plate back, rain drops fly, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j081",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1243,
+    1244,
+    1245
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. hands tighten the clamp with a tool, the arrow holds in the next gust, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j082",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1246,
+    1247,
+    1248
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. hands fix the reflector plate with two white reflectors under the arrow, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j083",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1249,
+    1250,
+    1251
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots turns on the headlight of a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right toward the sign, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j084",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1252,
+    1253,
+    1254
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. two white reflectors flash brightly under the arrow in the headlight beam, dusk, wet road, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j085",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1255,
+    1256,
+    1257
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. wide shot, the corrected arrow and the shining reflectors, a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots small, looking back at the empty road, rain clearing over the ocean, wet road, dusk",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j086",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1258,
+    1259,
+    1260
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. golden hour, a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots rides a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right along an Atlantic beach road, two waves roll in, foam on dark sand, camera flies up over a dune, golden hour, low warm sun",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j087",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1261,
+    1262,
+    1263
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots sits on a low rock by the water, helmet beside him on a stone, wind moves his short hair, golden light, golden hour, low warm sun",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j088",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1264,
+    1265,
+    1266
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. sea grass tips glow in the low sun as wind lays them into the light, golden hour, low warm sun",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j089",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1267,
+    1268,
+    1269
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots rides a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right on a coastal highway toward a sunset over a calm bay, small figure in vast landscape, golden hour, low warm sun",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j090",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1270,
+    1271,
+    1272
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. wide final view of the bay at sunset, empty road, a tiny red taillight far away, golden hour, low warm sun",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  }
+ ]
+}

@@ -1,0 +1,358 @@
+{
+ "stage": "key",
+ "w": 1344,
+ "h": 768,
+ "styles": [
+  {
+   "name": "j029",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1087,
+    1088,
+    1089
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. flying low over dark harbour water toward the silhouette of ruined Lower Manhattan, no lights, haze between towers, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j030",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1090,
+    1091,
+    1092
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. night street, collapsed facade slabs across lanes, a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right headlight beam cuts the haze, a crushed bus shelter, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j031",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1093,
+    1094,
+    1095
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a motorcycle front tyre breaks the reflection in shallow water on asphalt at night, small splashes, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j032",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1096,
+    1097,
+    1098
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. red brake light glow on a crumpled bus fender at night, a fresh tyre arc in wet dust, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j033",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1099,
+    1100,
+    1101
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. an empty dark window across the street, a single white glint flashes in a hanging shard of glass, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j034",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1102,
+    1103,
+    1104
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots, visor up, leaning forward, eyes searching the dark window, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j035",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1105,
+    1106,
+    1107
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a broken window shutter swings in the wind, the glass shard catches the sky light and goes dark, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j036",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1108,
+    1109,
+    1110
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. inside a dark parking garage, a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right with headlight on, nose to a service ramp; a steel cabinet door leans by the exit, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j037",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1111,
+    1112,
+    1113
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. hands lift a canister with faded blue tape from a hidden floor niche, headlight light, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j038",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1114,
+    1115,
+    1116
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. three lean ash-grey hounds with faint red glowing lines on their bodies rise from a dry lair under the ramp in darkness, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j039",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1117,
+    1118,
+    1119
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. an ash-grey hound with red glowing lines lunges at a steel door held up as a shield, sparks of motion, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j040",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1120,
+    1121,
+    1122
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots jumps on a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right and twists the throttle, headlight swings to the ramp, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j041",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1123,
+    1124,
+    1125
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. side view, motorcycle races out of a garage ramp into a night street, two hounds running right behind, red taillight, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j042",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1126,
+    1127,
+    1128
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a third hound cuts across a sidewalk to intercept the motorcycle, night street with slabs, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j043",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1129,
+    1130,
+    1131
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. point of view of a running hound chasing a red taillight through a dark ruined street, ground rushing by, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j044",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1132,
+    1133,
+    1134
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. low angle, motorcycle brakes hard and slides around a fallen slab, hounds overshoot, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j045",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1135,
+    1136,
+    1137
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. the hounds stop at the edge of their territory and watch the motorcycle go, red lines dimming, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j046",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1138,
+    1139,
+    1140
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. the same crumpled bus from the other side, a muddy tyre arc on wet dust filling with water, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j047",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1141,
+    1142,
+    1143
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots breathing, looking from the track to a pale strip of sky between towers, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j048",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1144,
+    1145,
+    1146
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. wide night shot, a single intact lane of a northern bridge across the Hudson, a tiny headlight crossing, distant Manhattan, dark blue moonless night, no city lights",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts, sunset, sun, daylight, orange sky, street lights, lit windows"
+  },
+  {
+   "name": "j049",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1147,
+    1148,
+    1149
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right parked at a harbour edge before dawn, empty ferry gangway dips into water, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j050",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1150,
+    1151,
+    1152
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a rusty chain moving in the tide at a harbour railing, wet links, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j051",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1153,
+    1154,
+    1155
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. telephoto over the shoulder of a man in a pale helmet: across the water the colossal broken head of the Statue of Liberty with green copper crown lies on rubble, mist, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j052",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1156,
+    1157,
+    1158
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of the giant copper face of the fallen statue, wet streaks, gulls, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j053",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1159,
+    1160,
+    1161
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a road reflector plate with two white reflectors lies by a railing, a hand picks it up, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j054",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1162,
+    1163,
+    1164
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. close up of a reflector plate catching the headlight, two white points flash, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  },
+  {
+   "name": "j055",
+   "model": "PixArt-alpha/PixArt-Sigma-XL-2-1024-MS",
+   "steps": 24,
+   "cfg": 4.5,
+   "seeds": [
+    1165,
+    1166,
+    1167
+   ],
+   "prompt": "anime feature film background art, lush hand painted environment, luminous light, cel shaded character with clean lines, vivid saturated colors, cinematic composition. a lone rider in a white full-face motorcycle helmet, light beige short jacket, dark trousers, tall light boots slides the reflector plate into the side bag of a rugged old motorcycle with a single round headlight, red taillight, a bag on the left and a jerrycan with faded blue tape on the right, blue hour before dawn",
+   "negative": "photo, photorealistic, 3d render, cgi, text, letters, numbers, watermark, signature, logo, frame, border, lowres, blurry, deformed, extra wheels, duplicate, ugly, chibi, crowd, green jacket, shorts"
+  }
+ ]
+}
